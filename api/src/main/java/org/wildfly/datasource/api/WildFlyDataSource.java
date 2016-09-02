@@ -22,13 +22,22 @@
 
 package org.wildfly.datasource.api;
 
+import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
+
 import javax.sql.DataSource;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends DataSource {
+public interface WildFlyDataSource extends DataSource, AutoCloseable {
 
-    Metrics getMetrics();
+    DataSourceConfiguration getConfiguration();
+
+    WildFlyDataSourceMetrics getMetrics();
+
+    void setListener(WildFlyDataSourceListener listener);
+
+    @Override
+    void close();
 
 }

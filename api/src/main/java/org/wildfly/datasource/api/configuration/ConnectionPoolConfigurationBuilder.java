@@ -22,6 +22,8 @@
 
 package org.wildfly.datasource.api.configuration;
 
+import java.util.function.Consumer;
+
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
@@ -29,64 +31,52 @@ public class ConnectionPoolConfigurationBuilder {
 
     private volatile boolean lock;
 
-    private ConnectionPoolConfiguration.PoolImplementation poolImplementation;
-    private ConnectionPoolConfiguration.PreFillMode preFillMode;
-    private String connectionInitSql;
-    private int initialSize;
-    private volatile int minSize;
-    private volatile int maxSize;
-    private volatile int acquisitionTimeout;
+    private ConnectionPoolConfiguration.PoolImplementation poolImplementation = ConnectionPoolConfiguration.PoolImplementation.DEFAULT;
+    private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.AUTO;
+    private String connectionInitSql = "";
+    private int initialSize = 0;
+    private volatile int minSize = 0;
+    private volatile int maxSize = 0;
+    private volatile int acquisitionTimeout = 1_000;
 
     public ConnectionPoolConfigurationBuilder() {
         this.lock = false;
     }
 
-    private void internalCheck() {
+    private ConnectionPoolConfigurationBuilder applySetting(Consumer<ConnectionPoolConfigurationBuilder> consumer) {
         if (lock) {
             throw new IllegalStateException("Attempt to modify an immutable configuration");
         }
+        consumer.accept( this );
+        return this;
     }
 
     public ConnectionPoolConfigurationBuilder setPoolImplementation(ConnectionPoolConfiguration.PoolImplementation poolImplementation) {
-        internalCheck();
-        this.poolImplementation = poolImplementation;
-        return this;
+        return applySetting( c -> c.poolImplementation = poolImplementation );
     }
 
     public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
-        internalCheck();
-        this.preFillMode = preFillMode;
-        return this;
+        return applySetting( c -> c.preFillMode = preFillMode );
     }
 
     public ConnectionPoolConfigurationBuilder setConnectionInitSql(String connectionInitSql) {
-        internalCheck();
-        this.connectionInitSql = connectionInitSql;
-        return this;
+        return applySetting( c -> c.connectionInitSql = connectionInitSql );
     }
 
     public ConnectionPoolConfigurationBuilder setInitialSize(int initialSize) {
-        internalCheck();
-        this.initialSize = initialSize;
-        return this;
+        return applySetting( c -> c.initialSize = initialSize );
     }
 
     public ConnectionPoolConfigurationBuilder setMinSize(int minSize) {
-        internalCheck();
-        this.minSize = minSize;
-        return this;
+        return applySetting( c -> c.minSize = minSize );
     }
 
     public ConnectionPoolConfigurationBuilder setMaxSize(int maxSize) {
-        internalCheck();
-        this.maxSize = maxSize;
-        return this;
+        return applySetting( c -> c.maxSize = maxSize );
     }
 
     public ConnectionPoolConfigurationBuilder setAcquisitionTimeout(int acquisitionTimeout) {
-        internalCheck();
-        this.acquisitionTimeout = acquisitionTimeout;
-        return this;
+        return applySetting( c -> c.acquisitionTimeout = acquisitionTimeout );
     }
 
     public ConnectionPoolConfiguration build() {
@@ -143,7 +133,9 @@ public class ConnectionPoolConfigurationBuilder {
             public void setAcquisitionTimeout(int timeout) {
                 acquisitionTimeout = timeout;
             }
+
         };
+
     }
 
 }

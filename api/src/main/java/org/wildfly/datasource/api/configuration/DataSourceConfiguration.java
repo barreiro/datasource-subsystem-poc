@@ -20,23 +20,48 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
+package org.wildfly.datasource.api.configuration;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface Metrics {
+public interface DataSourceConfiguration {
 
-    /**
-     * @param time in milliseconds
-     */
-    void connectionAcquired(int time);
+    String getJndiName();
 
-    /**
-     * @param time in milliseconds
-     */
-    void connectionReturn(int time);
+    long getConnectionValidationTimeout();
 
-    // TODO: add more metrics
+    long getConnectionReapTimeout();
+
+    ConnectionFactoryConfiguration getConnectionFactoryConfiguration();
+
+    ConnectionPoolConfiguration getConnectionPoolConfiguration();
+
+    DataSourceImplementation getDataSourceImplementation();
+
+    InterruptHandlingMode getInterruptHandlingMode();
+
+    TransactionIsolation getTransactionIsolation();
+
+    // TODO: Security ( here or ConnectionFactoryConfiguration ??? )
+
+    // --- //
+
+    boolean getMetricsEnabled();
+    void setMetricsEnabled(boolean metricsEnabled);
+
+    // --- //
+
+    enum DataSourceImplementation {
+        WILDFLY, HIKARI
+    }
+
+    enum InterruptHandlingMode {
+        AUTO, ON, OFF
+    }
+
+    enum TransactionIsolation {
+        NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+    }
 
 }

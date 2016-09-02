@@ -22,6 +22,8 @@
 
 package org.wildfly.datasource.api.configuration;
 
+import java.util.function.Consumer;
+
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
@@ -29,74 +31,74 @@ public class DataSourceConfigurationBuilder {
 
     private volatile boolean lock;
 
-    private String jndiName;
-    private long connectionValidationTimeout;
-    private long connectionReapTimeout;
+    private String jndiName = "";
+    private long connectionValidationTimeout = 60_000;
+    private long connectionReapTimeout = 600_000;
+    private ConnectionFactoryConfiguration connectionFactoryConfiguration;
     private ConnectionPoolConfiguration connectionPoolConfiguration;
+    private DataSourceConfiguration.DataSourceImplementation dataSourceImplementation = DataSourceConfiguration.DataSourceImplementation.WILDFLY;
     private DataSourceConfiguration.InterruptHandlingMode interruptHandlingMode;
-    private DataSourceConfiguration.PreparedStatementCacheMode preparedStatementCacheMode;
     private DataSourceConfiguration.TransactionIsolation transactionIsolation;
-    private volatile boolean metricsEnabled;
+    private volatile boolean metricsEnabled = false;
 
     public DataSourceConfigurationBuilder() {
         this.lock = false;
     }
 
-    private void internalCheck() {
+    private DataSourceConfigurationBuilder applySetting(Consumer<DataSourceConfigurationBuilder> consumer) {
         if (lock) {
             throw new IllegalStateException("Attempt to modify an immutable configuration");
         }
-    }
-
-    public DataSourceConfigurationBuilder setJndiName(String jndiName) {
-        internalCheck();
-        this.jndiName = jndiName;
+        consumer.accept( this );
         return this;
+    }
+    public DataSourceConfigurationBuilder setJndiName(String jndiName) {
+        return applySetting( c -> c.jndiName = jndiName );
     }
 
     public DataSourceConfigurationBuilder setConnectionValidationTimeout(long connectionValidationTimeout) {
-        internalCheck();
-        this.connectionValidationTimeout = connectionValidationTimeout;
-        return this;
+        return applySetting( c -> c.connectionValidationTimeout = connectionValidationTimeout );
     }
 
     public DataSourceConfigurationBuilder setConnectionReapTimeout(long connectionReapTimeout) {
-        internalCheck();
-        this.connectionReapTimeout = connectionReapTimeout;
-        return this;
+        return applySetting( c -> c.connectionReapTimeout = connectionReapTimeout );
+    }
+
+    public DataSourceConfigurationBuilder setConnectionFactoryConfiguration(ConnectionFactoryConfiguration connectionFactoryConfiguration) {
+        return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfiguration );
     }
 
     public DataSourceConfigurationBuilder setConnectionPoolConfiguration(ConnectionPoolConfiguration connectionPoolConfiguration) {
-        internalCheck();
-        this.connectionPoolConfiguration = connectionPoolConfiguration;
-        return this;
+        return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfiguration );
+    }
+
+    public DataSourceConfigurationBuilder setDataSourceImplementation(DataSourceConfiguration.DataSourceImplementation dataSourceImplementation) {
+        return applySetting( c -> c.dataSourceImplementation = dataSourceImplementation );
     }
 
     public DataSourceConfigurationBuilder setInterruptHandlingMode(DataSourceConfiguration.InterruptHandlingMode interruptHandlingMode) {
-        internalCheck();
-        this.interruptHandlingMode = interruptHandlingMode;
-        return this;
-    }
-
-    public DataSourceConfigurationBuilder setPreparedStatementCacheMode(DataSourceConfiguration.PreparedStatementCacheMode preparedStatementCacheMode) {
-        internalCheck();
-        this.preparedStatementCacheMode = preparedStatementCacheMode;
-        return this;
+        return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
     }
 
     public DataSourceConfigurationBuilder setTransactionIsolation(DataSourceConfiguration.TransactionIsolation transactionIsolation) {
-        internalCheck();
-        this.transactionIsolation = transactionIsolation;
-        return this;
+        return applySetting( c -> c.transactionIsolation = transactionIsolation );
     }
 
     public DataSourceConfigurationBuilder setMetricsEnabled(boolean metricsEnabled) {
-        internalCheck();
-        this.metricsEnabled = metricsEnabled;
-        return this;
+        return applySetting( c -> c.metricsEnabled = metricsEnabled );
+    }
+
+    private void validate() {
+        if ( connectionFactoryConfiguration == null ) {
+            throw new IllegalArgumentException( "Connection factory configuration not defined" );
+        }
+        if ( connectionPoolConfiguration == null ) {
+            throw new IllegalArgumentException( "Connection poll configuration not defined" );
+        }
     }
 
     public DataSourceConfiguration build() {
+        validate();
         this.lock = true;
 
         return new DataSourceConfiguration() {
@@ -117,18 +119,23 @@ public class DataSourceConfigurationBuilder {
             }
 
             @Override
-            public ConnectionPoolConfiguration getPoolConfiguration() {
+            public ConnectionFactoryConfiguration getConnectionFactoryConfiguration() {
+                return connectionFactoryConfiguration;
+            }
+
+            @Override
+            public ConnectionPoolConfiguration getConnectionPoolConfiguration() {
                 return connectionPoolConfiguration;
+            }
+
+            @Override
+            public DataSourceImplementation getDataSourceImplementation() {
+                return dataSourceImplementation;
             }
 
             @Override
             public InterruptHandlingMode getInterruptHandlingMode() {
                 return interruptHandlingMode;
-            }
-
-            @Override
-            public PreparedStatementCacheMode getPreparedStatementCacheMode() {
-                return preparedStatementCacheMode;
             }
 
             @Override
@@ -147,6 +154,7 @@ public class DataSourceConfigurationBuilder {
             }
 
         };
+
     }
 
 }

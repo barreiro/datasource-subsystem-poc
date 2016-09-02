@@ -20,23 +20,22 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
-
-import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
-import org.wildfly.datasource.impl.WildFlyDataSourceImpl;
-
-import java.sql.SQLException;
+package org.wildfly.datasource.api.configuration;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class WildFlyDataSourceFactory {
+public abstract class ClassLoaderProvider {
 
-    private WildFlyDataSourceFactory() {
-    }
+    public static ClassLoaderProvider DEFAULT = new ClassLoaderProvider() {
 
-    public static WildFlyDataSource create(DataSourceConfiguration configuration) throws SQLException {
-        return null; // new WildFlyDataSourceImpl( configuration );
-    }
+        @Override
+        public ClassLoader getClassLoader(String className) {
+            return ClassLoader.getSystemClassLoader();
+        }
+
+    };
+
+    public abstract ClassLoader getClassLoader(String className);
 
 }

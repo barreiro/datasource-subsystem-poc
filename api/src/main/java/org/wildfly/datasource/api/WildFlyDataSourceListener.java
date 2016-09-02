@@ -20,46 +20,29 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api;
+
+import java.sql.Connection;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface DataSourceConfiguration {
+public interface WildFlyDataSourceListener {
 
-    String getJndiName();
+    Connection onConnectionCreated(Connection connection);
 
-    long getConnectionValidationTimeout();
+    void beforeConnectionAcquire();
 
-    long getConnectionReapTimeout();
+    Connection onConnectionAcquired(Connection connection);
 
-    ConnectionPoolConfiguration getPoolConfiguration();
+    void beforeConnectionReturn();
 
-    InterruptHandlingMode getInterruptHandlingMode();
+    Connection onConnectionReturn(Connection connection);
 
-    PreparedStatementCacheMode getPreparedStatementCacheMode();
+    Connection beforeConnectionValidation(Connection connection);
 
-    TransactionIsolation getTransactionIsolation();
+    Connection onConnectionTimeout(Connection connection);
 
-    // TODO: Security ( here or ConnectionFactoryConfiguration ??? )
-
-    // --- //
-
-    boolean getMetricsEnabled();
-    void setMetricsEnabled(boolean metricsEnabled);
-
-    // --- //
-
-    enum InterruptHandlingMode {
-        AUTO, ON, OFF
-    }
-
-    enum PreparedStatementCacheMode {
-        AUTO, ON, OFF
-    }
-
-    enum TransactionIsolation {
-        NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
-    }
+    Connection onConnectionClose(Connection connection);
 
 }

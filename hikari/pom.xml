@@ -26,27 +26,42 @@
         <version>11.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>datasource-subsystem-api</artifactId>
+    <artifactId>datasource-subsystem-hikari</artifactId>
     <version>11.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>WildFly DataSource Subsystem API</name>
+    <name>WildFly DataSource Subsystem Implementation based on Hikari CP</name>
 
     <packaging>jar</packaging>
 
     <dependencies>
 
         <dependency>
-            <groupId>org.wildlfy</groupId>
-            <artifactId>datasource-subsystem-hikari</artifactId>
+            <groupId>org.wildfly</groupId>
+            <artifactId>datasource-subsystem-api</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.wildlfy</groupId>
-            <artifactId>datasource-subsystem-impl</artifactId>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${version.com.zaxxer.hikari}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${version.com.h2database}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${version.org.junit}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wildfly</groupId>
-            <artifactId>datasource-subsystem-hikari</artifactId>
+            <artifactId>datasource-subsystem-api</artifactId>
             <version>11.0.0.Alpha1-SNAPSHOT</version>
         </dependency>
 

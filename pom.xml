@@ -36,6 +36,7 @@
     <modules>
         <module>api</module>
         <module>impl</module>
+        <module>hikari</module>
 
         <module>benchmark</module>
     </modules>
@@ -50,6 +51,9 @@
             versions, add the artifactId or other qualifier to the property name.
             For example: <version.org.jboss.as.console>
          -->
+        <version.com.h2database>1.4.192</version.com.h2database>
+        <version.com.zaxxer.hikari>2.4.7</version.com.zaxxer.hikari>
+        <version.org.junit>4.12</version.org.junit>
         <version.org.openjdk.jmh>1.13</version.org.openjdk.jmh>
     </properties>
 
@@ -57,7 +61,7 @@
         <repository>
             <id>jboss-public-repository-group</id>
             <name>JBoss Public Repository Group</name>
-            <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+            <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
             <layout>default</layout>
             <releases>
                 <enabled>true</enabled>

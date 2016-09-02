@@ -20,22 +20,37 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface ClassLoaderProvider {
+public interface WildFlyDataSourceMetrics {
 
-    class DEFAULT implements ClassLoaderProvider {
+    long getCreatedCount();
 
-        @Override
-        public ClassLoader getClassLoader(String className) {
-            return ClassLoader.getSystemClassLoader();
-        }
+    long getAverageCreationTime();
 
-    }
+    long getMaxCreationTime();
 
-    ClassLoader getClassLoader(String className);
+    long getTotalCreationTime();
+
+    // --- //
+
+    long getActiveCount();
+
+    long getMaxUsedCount();
+
+    long getAvailableCount();
+
+    long getAverageBlockingTime();
+
+    long getMaxWaitTime();
+
+    long getTotalBlockingTime();
+
+    long getDestroyedCount();
+
+    long getTimedOutCount();
 
 }
