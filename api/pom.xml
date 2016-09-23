@@ -34,22 +34,26 @@
     <packaging>jar</packaging>
 
     <dependencies>
-
-        <dependency>
-            <groupId>org.wildlfy</groupId>
-            <artifactId>datasource-subsystem-hikari</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>org.wildlfy</groupId>
             <artifactId>datasource-subsystem-impl</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.wildfly</groupId>
             <artifactId>datasource-subsystem-hikari</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.transaction</groupId>
+            <artifactId>javax.transaction-api</artifactId>
+            <version>${version.javax.transation}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>datasource-subsystem-impl</artifactId>
             <version>11.0.0.Alpha1-SNAPSHOT</version>
         </dependency>
-
     </dependencies>
 
 </project>

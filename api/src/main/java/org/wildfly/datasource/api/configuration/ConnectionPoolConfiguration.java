@@ -27,23 +27,29 @@ package org.wildfly.datasource.api.configuration;
  */
 public interface ConnectionPoolConfiguration {
 
-    PoolImplementation getPoolImplementation();
+    PoolImplementation poolImplementation();
 
-    PreFillMode getPreFillMode();
+    PreFillMode preFillMode();
 
-    String getConnectionInitSql();
+    String connectionInitSql();
 
-    int getInitialSize();
+    InterruptHandlingMode interruptHandlingMode();
+
+    ConnectionFactoryConfiguration connectionFactoryConfiguration();
+
+    long connectionValidationTimeout();
+
+    long connectionReapTimeout();
 
     // --- Mutable attributes
 
-    int getMinSize();
+    int minSize();
     void setMinSize(int size);
 
-    int getMaxSize();
+    int maxSize();
     void setMaxSize(int size);
 
-    int getAcquisitionTimeout();
+    int acquisitionTimeout();
     void setAcquisitionTimeout(int timeout);
 
     // TODO: Allow registration of listeners for changes ?!?!
@@ -55,6 +61,10 @@ public interface ConnectionPoolConfiguration {
     }
 
     enum PreFillMode {
+        OFF, MIN, MAX
+    }
+
+    enum InterruptHandlingMode {
         AUTO, ON, OFF
     }
 

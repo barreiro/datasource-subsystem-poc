@@ -23,26 +23,85 @@
 package org.wildfly.datasource.api;
 
 import java.sql.Connection;
+import java.util.List;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
 public interface WildFlyDataSourceListener {
 
-    Connection onConnectionCreated(Connection connection);
+    default void beforeConnectionCreated() {}
 
-    void beforeConnectionAcquire();
+    default void onConnectionCreated(Connection connection) {}
 
-    Connection onConnectionAcquired(Connection connection);
+    default void beforeConnectionAcquire() {}
 
-    void beforeConnectionReturn();
+    default void onConnectionAcquired(Connection connection) {}
 
-    Connection onConnectionReturn(Connection connection);
+    default void beforeConnectionReturn() {}
 
-    Connection beforeConnectionValidation(Connection connection);
+    default void onConnectionReturn(Connection connection) {}
 
-    Connection onConnectionTimeout(Connection connection);
+    default void onConnectionValidation(Connection connection) {}
 
-    Connection onConnectionClose(Connection connection);
+    default void onConnectionTimeout(Connection connection) {}
+
+    default void onConnectionClose(Connection connection) {}
+
+    // --- //
+
+    static void fireBeforeConnectionCreated(List<WildFlyDataSourceListener> listeners) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.beforeConnectionCreated();
+        }
+    }
+
+    static void fireOnConnectionCreated(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionCreated( connection );
+        }
+    }
+
+    static void fireBeforeConnectionAcquire(List<WildFlyDataSourceListener> listeners) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.beforeConnectionAcquire();
+        }
+    }
+
+    static void fireOnConnectionAcquired(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionAcquired( connection );
+        }
+    }
+
+    static void fireBeforeConnectionReturn(List<WildFlyDataSourceListener> listeners) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.beforeConnectionReturn();
+        }
+    }
+
+    static void fireOnConnectionReturn(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionReturn( connection );
+        }
+    }
+
+    static void fireOnConnectionValidation(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionValidation( connection );
+        }
+    }
+
+    static void fireOnConnectionTimeout(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionTimeout( connection );
+        }
+    }
+
+    static void fireOnConnectionClose(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionAcquired( connection );
+        }
+    }
 
 }

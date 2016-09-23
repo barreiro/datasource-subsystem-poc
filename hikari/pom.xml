@@ -38,6 +38,7 @@
         <dependency>
             <groupId>org.wildfly</groupId>
             <artifactId>datasource-subsystem-api</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -58,11 +59,6 @@
             <artifactId>junit</artifactId>
             <version>${version.org.junit}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.wildfly</groupId>
-            <artifactId>datasource-subsystem-api</artifactId>
-            <version>11.0.0.Alpha1-SNAPSHOT</version>
         </dependency>
 
     </dependencies>

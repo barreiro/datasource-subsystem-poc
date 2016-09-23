@@ -26,18 +26,16 @@ import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.impl.pool.LinkedBlockingQueuePool;
 import org.wildfly.datasource.impl.pool.LockFreeExchangePool;
 
-import java.sql.Connection;
-
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class ConnectionPoolFactory {
+public class ConnectionHandlerPoolFactory {
 
-     private ConnectionPoolFactory() {
+     private ConnectionHandlerPoolFactory() {
      }
 
-     public static BlockingPool<Connection> create( ConnectionPoolConfiguration configuration ) {
-          switch ( configuration.getPoolImplementation() ) {
+     public static BlockingPool<ConnectionHandler> create(ConnectionPoolConfiguration configuration ) {
+          switch ( configuration.poolImplementation() ) {
                default:
                case DEFAULT:
                case BLOCKING_QUEUE: {

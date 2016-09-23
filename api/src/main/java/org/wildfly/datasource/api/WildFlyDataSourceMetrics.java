@@ -27,30 +27,34 @@ package org.wildfly.datasource.api;
  */
 public interface WildFlyDataSourceMetrics {
 
-    long getCreatedCount();
+    long createdCount();
 
-    long getAverageCreationTime();
+    long averageCreationTime();
 
-    long getMaxCreationTime();
+    long maxCreationTime();
 
-    long getTotalCreationTime();
+    long totalCreationTime();
+
+    long destroyedCount();
+
+    long timedOutCount();
 
     // --- //
 
-    long getActiveCount();
+    long activeCount();
 
-    long getMaxUsedCount();
+    long maxUsedCount();
 
-    long getAvailableCount();
+    long availableCount();
 
-    long getAverageBlockingTime();
+    long averageBlockingTime();
 
-    long getMaxWaitTime();
+    long maxBlockingTime();
 
-    long getTotalBlockingTime();
+    long totalBlockingTime();
 
-    long getDestroyedCount();
+    // --- //
 
-    long getTimedOutCount();
+    void reset();
 
 }

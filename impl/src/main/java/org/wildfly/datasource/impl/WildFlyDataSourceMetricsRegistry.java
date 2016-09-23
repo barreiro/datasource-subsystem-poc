@@ -20,24 +20,25 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
+package org.wildfly.datasource.impl;
 
-import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
-
-import javax.sql.DataSource;
+import org.wildfly.datasource.api.WildFlyDataSourceMetrics;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends DataSource, AutoCloseable {
+public interface WildFlyDataSourceMetricsRegistry extends WildFlyDataSourceMetrics {
 
-    DataSourceConfiguration getConfiguration();
+    long beforeConnectionCreated();
 
-    WildFlyDataSourceMetrics getMetrics();
+    void afterConnectionCreated(long timestamp);
 
-    void addListener(WildFlyDataSourceListener listener);
+    long beforeConnectionAcquire();
 
-    @Override
-    void close();
+    void afterConnectionAcquire(long timestamp);
+
+    void afterConnectionTimeout();
+
+    void afterConnectionClose();
 
 }

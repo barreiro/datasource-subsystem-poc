@@ -3,14 +3,11 @@ package org.wildfly.datasource.hikari.test;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
 import org.wildfly.datasource.api.WildFlyDataSourceFactory;
-import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -26,12 +23,12 @@ public class BasicTest {
     public void basicTest() throws SQLException {
         DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.HIKARI )
-                .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                        .setDriverClassName( H2_DRIVER_CLASS )
-                        .setJdbcUrl( H2_JDBC_URL )
-                        .build()
-                )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
+                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
+                                .setDriverClassName( H2_DRIVER_CLASS )
+                                .setJdbcUrl( H2_JDBC_URL )
+                                .build()
+                        )
                         .setMaxSize( 10 )
                         .build()
                 )

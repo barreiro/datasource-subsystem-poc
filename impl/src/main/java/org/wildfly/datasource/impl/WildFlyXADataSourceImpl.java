@@ -20,24 +20,30 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
+package org.wildfly.datasource.impl;
 
+import org.wildfly.datasource.api.WildFlyXADataSource;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 
-import javax.sql.DataSource;
+import javax.sql.XAConnection;
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends DataSource, AutoCloseable {
+public class WildFlyXADataSourceImpl extends WildFlyDataSourceImpl implements WildFlyXADataSource {
 
-    DataSourceConfiguration getConfiguration();
-
-    WildFlyDataSourceMetrics getMetrics();
-
-    void addListener(WildFlyDataSourceListener listener);
+    public WildFlyXADataSourceImpl(DataSourceConfiguration configuration) {
+        super( configuration );
+    }
 
     @Override
-    void close();
+    public XAConnection getXAConnection() throws SQLException {
+        return null;
+    }
 
+    @Override
+    public XAConnection getXAConnection(String user, String password) throws SQLException {
+        return getXAConnection();
+    }
 }

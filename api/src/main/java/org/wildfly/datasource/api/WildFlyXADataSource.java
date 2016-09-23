@@ -25,11 +25,12 @@ package org.wildfly.datasource.api;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 
 import javax.sql.DataSource;
+import javax.sql.XADataSource;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends DataSource, AutoCloseable {
+public interface WildFlyXADataSource extends XADataSource, AutoCloseable {
 
     DataSourceConfiguration getConfiguration();
 

@@ -22,7 +22,6 @@
 
 package org.wildfly.datasource.api.configuration;
 
-import java.sql.Driver;
 import java.util.function.Consumer;
 
 /**
@@ -36,9 +35,10 @@ public class ConnectionFactoryConfigurationBuilder {
     private String username = "";
     private String password = "";
     private String jdbcUrl = "";
+    private String initSql = "";
     private String driverClassName = "";
-    private Class<? extends Driver> driverClass;
     private ClassLoaderProvider classLoaderProvider;
+    private ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation;
 
     public ConnectionFactoryConfigurationBuilder() {
         this.lock = false;
@@ -68,8 +68,8 @@ public class ConnectionFactoryConfigurationBuilder {
         return applySetting( c -> c.jdbcUrl = jdbcUrl );
     }
 
-    public ConnectionFactoryConfigurationBuilder setDriverClass(Class<? extends Driver> driverClass) {
-        return applySetting( c -> c.driverClass = driverClass );
+    public ConnectionFactoryConfigurationBuilder setInitSql(String initSql) {
+        return applySetting( c -> c.initSql = initSql );
     }
 
     public ConnectionFactoryConfigurationBuilder setDriverClassName(String driverClassName) {
@@ -80,44 +80,62 @@ public class ConnectionFactoryConfigurationBuilder {
         return applySetting( c -> c.classLoaderProvider = classLoaderProvider );
     }
 
+    public ConnectionFactoryConfigurationBuilder setClassLoader(ClassLoader classLoader) {
+        return applySetting( c -> c.classLoaderProvider = new ClassLoaderProvider() {
+            @Override
+            public ClassLoader getClassLoader(String className) {
+                return classLoader;
+            }
+        } );
+    }
+
+    public ConnectionFactoryConfigurationBuilder setTransactionIsolation(ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation) {
+        return applySetting( c -> c.transactionIsolation = transactionIsolation );
+    }
+
     public ConnectionFactoryConfiguration build() {
         this.lock = true;
 
         return new ConnectionFactoryConfiguration() {
 
             @Override
-            public boolean getAutoCommit() {
+            public boolean autoCommit() {
                 return autoCommit;
             }
 
             @Override
-            public String getUsername() {
+            public String username() {
                 return username;
             }
 
             @Override
-            public String getPassword() {
+            public String password() {
                 return password;
             }
 
             @Override
-            public String getJdbcUrl() {
+            public String jdbcUrl() {
                 return jdbcUrl;
             }
 
             @Override
-            public Class<? extends Driver> getDriverClass() {
-                return driverClass;
+            public String initSql() {
+                return initSql;
             }
 
             @Override
-            public String getDriverClassName() {
+            public String driverClassName() {
                 return driverClassName;
             }
 
             @Override
-            public ClassLoaderProvider getClassLoaderProvider() {
+            public ClassLoaderProvider classLoaderProvider() {
                 return classLoaderProvider != null ? classLoaderProvider : ClassLoaderProvider.DEFAULT;
+            }
+
+            @Override
+            public TransactionIsolation transactionIsolation() {
+                return transactionIsolation;
             }
 
         };

@@ -32,12 +32,15 @@ public class ConnectionPoolConfigurationBuilder {
     private volatile boolean lock;
 
     private ConnectionPoolConfiguration.PoolImplementation poolImplementation = ConnectionPoolConfiguration.PoolImplementation.DEFAULT;
-    private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.AUTO;
+    private ConnectionFactoryConfiguration connectionFactoryConfiguration;
+    private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.OFF;
     private String connectionInitSql = "";
-    private int initialSize = 0;
     private volatile int minSize = 0;
     private volatile int maxSize = 0;
+    private long connectionValidationTimeout = 60_000;
+    private long connectionReapTimeout = 600_000;
     private volatile int acquisitionTimeout = 1_000;
+    private ConnectionPoolConfiguration.InterruptHandlingMode interruptHandlingMode;
 
     public ConnectionPoolConfigurationBuilder() {
         this.lock = false;
@@ -55,16 +58,16 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.poolImplementation = poolImplementation );
     }
 
+    public ConnectionPoolConfigurationBuilder setConnectionFactoryConfiguration(ConnectionFactoryConfiguration connectionFactoryConfiguration) {
+        return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfiguration );
+    }
+
     public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
         return applySetting( c -> c.preFillMode = preFillMode );
     }
 
     public ConnectionPoolConfigurationBuilder setConnectionInitSql(String connectionInitSql) {
         return applySetting( c -> c.connectionInitSql = connectionInitSql );
-    }
-
-    public ConnectionPoolConfigurationBuilder setInitialSize(int initialSize) {
-        return applySetting( c -> c.initialSize = initialSize );
     }
 
     public ConnectionPoolConfigurationBuilder setMinSize(int minSize) {
@@ -79,33 +82,55 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.acquisitionTimeout = acquisitionTimeout );
     }
 
+    public ConnectionPoolConfigurationBuilder setInterruptHandlingMode(ConnectionPoolConfiguration.InterruptHandlingMode interruptHandlingMode) {
+        return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
+    }
+
+    public ConnectionPoolConfigurationBuilder setConnectionValidationTimeout(long connectionValidationTimeout) {
+        return applySetting( c -> c.connectionValidationTimeout = connectionValidationTimeout );
+    }
+
+    public ConnectionPoolConfigurationBuilder setConnectionReapTimeout(long connectionReapTimeout) {
+        return applySetting( c -> c.connectionReapTimeout = connectionReapTimeout );
+    }
+
+    private void validate() {
+        if ( minSize > maxSize ) {
+            throw new IllegalArgumentException( "Wrong size of min / maz size" );
+        }
+        if ( connectionFactoryConfiguration == null ) {
+            throw new IllegalArgumentException( "Connection factory configuration not defined" );
+        }
+    }
+
     public ConnectionPoolConfiguration build() {
+        validate();
         this.lock = true;
 
         return new ConnectionPoolConfiguration(){
 
             @Override
-            public PoolImplementation getPoolImplementation() {
+            public PoolImplementation poolImplementation() {
                 return poolImplementation;
             }
 
             @Override
-            public PreFillMode getPreFillMode() {
+            public ConnectionFactoryConfiguration connectionFactoryConfiguration() {
+                return connectionFactoryConfiguration;
+            }
+
+            @Override
+            public PreFillMode preFillMode() {
                 return preFillMode;
             }
 
             @Override
-            public String getConnectionInitSql() {
+            public String connectionInitSql() {
                 return connectionInitSql;
             }
 
             @Override
-            public int getInitialSize() {
-                return initialSize;
-            }
-
-            @Override
-            public int getMinSize() {
+            public int minSize() {
                 return minSize;
             }
 
@@ -115,7 +140,7 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public int getMaxSize() {
+            public int maxSize() {
                 return maxSize;
             }
 
@@ -125,13 +150,28 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public int getAcquisitionTimeout() {
+            public int acquisitionTimeout() {
                 return acquisitionTimeout;
             }
 
             @Override
             public void setAcquisitionTimeout(int timeout) {
                 acquisitionTimeout = timeout;
+            }
+
+            @Override
+            public InterruptHandlingMode interruptHandlingMode() {
+                return interruptHandlingMode;
+            }
+
+            @Override
+            public long connectionValidationTimeout() {
+                return connectionValidationTimeout;
+            }
+
+            @Override
+            public long connectionReapTimeout() {
+                return connectionReapTimeout;
             }
 
         };

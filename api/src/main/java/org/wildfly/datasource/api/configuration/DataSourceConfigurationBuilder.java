@@ -32,13 +32,10 @@ public class DataSourceConfigurationBuilder {
     private volatile boolean lock;
 
     private String jndiName = "";
-    private long connectionValidationTimeout = 60_000;
-    private long connectionReapTimeout = 600_000;
-    private ConnectionFactoryConfiguration connectionFactoryConfiguration;
     private ConnectionPoolConfiguration connectionPoolConfiguration;
     private DataSourceConfiguration.DataSourceImplementation dataSourceImplementation = DataSourceConfiguration.DataSourceImplementation.WILDFLY;
-    private DataSourceConfiguration.InterruptHandlingMode interruptHandlingMode;
-    private DataSourceConfiguration.TransactionIsolation transactionIsolation;
+
+
     private volatile boolean metricsEnabled = false;
 
     public DataSourceConfigurationBuilder() {
@@ -56,18 +53,6 @@ public class DataSourceConfigurationBuilder {
         return applySetting( c -> c.jndiName = jndiName );
     }
 
-    public DataSourceConfigurationBuilder setConnectionValidationTimeout(long connectionValidationTimeout) {
-        return applySetting( c -> c.connectionValidationTimeout = connectionValidationTimeout );
-    }
-
-    public DataSourceConfigurationBuilder setConnectionReapTimeout(long connectionReapTimeout) {
-        return applySetting( c -> c.connectionReapTimeout = connectionReapTimeout );
-    }
-
-    public DataSourceConfigurationBuilder setConnectionFactoryConfiguration(ConnectionFactoryConfiguration connectionFactoryConfiguration) {
-        return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfiguration );
-    }
-
     public DataSourceConfigurationBuilder setConnectionPoolConfiguration(ConnectionPoolConfiguration connectionPoolConfiguration) {
         return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfiguration );
     }
@@ -76,22 +61,11 @@ public class DataSourceConfigurationBuilder {
         return applySetting( c -> c.dataSourceImplementation = dataSourceImplementation );
     }
 
-    public DataSourceConfigurationBuilder setInterruptHandlingMode(DataSourceConfiguration.InterruptHandlingMode interruptHandlingMode) {
-        return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
-    }
-
-    public DataSourceConfigurationBuilder setTransactionIsolation(DataSourceConfiguration.TransactionIsolation transactionIsolation) {
-        return applySetting( c -> c.transactionIsolation = transactionIsolation );
-    }
-
     public DataSourceConfigurationBuilder setMetricsEnabled(boolean metricsEnabled) {
         return applySetting( c -> c.metricsEnabled = metricsEnabled );
     }
 
     private void validate() {
-        if ( connectionFactoryConfiguration == null ) {
-            throw new IllegalArgumentException( "Connection factory configuration not defined" );
-        }
         if ( connectionPoolConfiguration == null ) {
             throw new IllegalArgumentException( "Connection poll configuration not defined" );
         }
@@ -104,47 +78,22 @@ public class DataSourceConfigurationBuilder {
         return new DataSourceConfiguration() {
 
             @Override
-            public String getJndiName() {
+            public String jndiName() {
                 return jndiName;
             }
 
             @Override
-            public long getConnectionValidationTimeout() {
-                return connectionValidationTimeout;
-            }
-
-            @Override
-            public long getConnectionReapTimeout() {
-                return connectionReapTimeout;
-            }
-
-            @Override
-            public ConnectionFactoryConfiguration getConnectionFactoryConfiguration() {
-                return connectionFactoryConfiguration;
-            }
-
-            @Override
-            public ConnectionPoolConfiguration getConnectionPoolConfiguration() {
+            public ConnectionPoolConfiguration connectionPoolConfiguration() {
                 return connectionPoolConfiguration;
             }
 
             @Override
-            public DataSourceImplementation getDataSourceImplementation() {
+            public DataSourceImplementation dataSourceImplementation() {
                 return dataSourceImplementation;
             }
 
             @Override
-            public InterruptHandlingMode getInterruptHandlingMode() {
-                return interruptHandlingMode;
-            }
-
-            @Override
-            public TransactionIsolation getTransactionIsolation() {
-                return transactionIsolation;
-            }
-
-            @Override
-            public boolean getMetricsEnabled() {
+            public boolean metricsEnabled() {
                 return metricsEnabled;
             }
 

@@ -24,6 +24,8 @@ package org.wildfly.datasource.api;
 
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.hikari.HikariUnderTheCoversDataSourceImpl;
+import org.wildfly.datasource.impl.WildFlyDataSourceImpl;
+import org.wildfly.datasource.impl.WildFlyXADataSourceImpl;
 
 import java.sql.SQLException;
 
@@ -36,12 +38,22 @@ public class WildFlyDataSourceFactory {
     }
 
     public static WildFlyDataSource create(DataSourceConfiguration configuration) throws SQLException {
-        switch ( configuration.getDataSourceImplementation() ) {
+        switch ( configuration.dataSourceImplementation() ) {
             default:
             case WILDFLY:
-                //return new WildFlyDataSourceImpl( configuration );
+                return new WildFlyDataSourceImpl( configuration );
             case HIKARI:
                 return new HikariUnderTheCoversDataSourceImpl( configuration );
+        }
+    }
+
+    public static WildFlyXADataSource createXA(DataSourceConfiguration configuration) throws SQLException {
+        switch ( configuration.dataSourceImplementation() ) {
+            default:
+            case WILDFLY:
+                return new WildFlyXADataSourceImpl( configuration );
+            case HIKARI:
+                throw new SQLException( "Unsupported" );
         }
     }
 

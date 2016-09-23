@@ -27,6 +27,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.wildfly.datasource.api.WildFlyDataSource;
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.WildFlyDataSourceMetrics;
+import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
+import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 
 import java.io.PrintWriter;
@@ -41,6 +43,8 @@ import java.util.logging.Logger;
 public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
 
     private final DataSourceConfiguration configuration;
+    private final ConnectionPoolConfiguration poolConfiguration;
+    private final ConnectionFactoryConfiguration factoryConfiguration;
 
     private final HikariDataSource hikari;
 
@@ -48,31 +52,33 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
 
     public HikariUnderTheCoversDataSourceImpl(DataSourceConfiguration configuration) {
         this.configuration = configuration;
+        this.poolConfiguration = configuration.connectionPoolConfiguration();
+        this.factoryConfiguration = poolConfiguration.connectionFactoryConfiguration();
         this.hikari = new HikariDataSource( getHikariConfig( configuration) );
     }
 
-    private static HikariConfig getHikariConfig( DataSourceConfiguration configuration ) {
+    private HikariConfig getHikariConfig( DataSourceConfiguration configuration ) {
         HikariConfig hikariConfig = new HikariConfig();
 
-        hikariConfig.setDataSourceJNDI( configuration.getJndiName() );
-        hikariConfig.setIdleTimeout( configuration.getConnectionReapTimeout() );
-        hikariConfig.setValidationTimeout( configuration.getConnectionValidationTimeout() );
+        hikariConfig.setDataSourceJNDI( configuration.jndiName() );
+        hikariConfig.setIdleTimeout( poolConfiguration.connectionReapTimeout() );
+        hikariConfig.setValidationTimeout( poolConfiguration.connectionValidationTimeout() );
 
-        if( configuration.getTransactionIsolation() != null ) {
-            hikariConfig.setTransactionIsolation( "TRANSACTION_" + configuration.getTransactionIsolation().name() );
+        if( factoryConfiguration.transactionIsolation() != null ) {
+            hikariConfig.setTransactionIsolation( "TRANSACTION_" + factoryConfiguration.transactionIsolation().name() );
         }
 
-        hikariConfig.setJdbcUrl( configuration.getConnectionFactoryConfiguration().getJdbcUrl() );
-        hikariConfig.setUsername( configuration.getConnectionFactoryConfiguration().getJdbcUrl() );
-        hikariConfig.setPassword( configuration.getConnectionFactoryConfiguration().getPassword() );
-        hikariConfig.setAutoCommit( configuration.getConnectionFactoryConfiguration().getAutoCommit() );
-        hikariConfig.setConnectionInitSql( configuration.getConnectionPoolConfiguration().getConnectionInitSql() );
+        hikariConfig.setJdbcUrl( factoryConfiguration.jdbcUrl() );
+        hikariConfig.setUsername( factoryConfiguration.username() );
+        hikariConfig.setPassword( factoryConfiguration.password() );
+        hikariConfig.setAutoCommit( factoryConfiguration.autoCommit() );
+        hikariConfig.setConnectionInitSql( factoryConfiguration.initSql() );
 
-        hikariConfig.setMaximumPoolSize( configuration.getConnectionPoolConfiguration().getMaxSize() );
-        hikariConfig.setConnectionTimeout( configuration.getConnectionPoolConfiguration().getAcquisitionTimeout() );
-        hikariConfig.setDriverClassName( configuration.getConnectionFactoryConfiguration().getDriverClassName() );
+        hikariConfig.setMaximumPoolSize( poolConfiguration.maxSize() );
+        hikariConfig.setConnectionTimeout( poolConfiguration.acquisitionTimeout() );
+        hikariConfig.setDriverClassName( factoryConfiguration.driverClassName() );
 
-        if ( configuration.getMetricsEnabled() ) {
+        if ( configuration.metricsEnabled() ) {
             hikariConfig.setMetricsTrackerFactory( new HikariMetricsListenerAdaptor.Factory() );
         }
 
@@ -92,7 +98,7 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
     }
 
     @Override
-    public void setListener(WildFlyDataSourceListener listener) {
+    public void addListener(WildFlyDataSourceListener listener) {
         this.listener = listener;
     }
 

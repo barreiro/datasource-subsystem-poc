@@ -20,24 +20,18 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
+package org.wildfly.datasource.api.configuration;
 
-import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
-
-import javax.sql.DataSource;
+import javax.transaction.TransactionManager;
+import javax.transaction.TransactionSynchronizationRegistry;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends DataSource, AutoCloseable {
+public interface TransactionIntegration {
 
-    DataSourceConfiguration getConfiguration();
+    TransactionManager transactionManager();
 
-    WildFlyDataSourceMetrics getMetrics();
-
-    void addListener(WildFlyDataSourceListener listener);
-
-    @Override
-    void close();
+    TransactionSynchronizationRegistry transactionSynchronizationRegistry();
 
 }

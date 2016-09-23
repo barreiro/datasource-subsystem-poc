@@ -27,41 +27,21 @@ package org.wildfly.datasource.api.configuration;
  */
 public interface DataSourceConfiguration {
 
-    String getJndiName();
+    String jndiName();
 
-    long getConnectionValidationTimeout();
+    ConnectionPoolConfiguration connectionPoolConfiguration();
 
-    long getConnectionReapTimeout();
-
-    ConnectionFactoryConfiguration getConnectionFactoryConfiguration();
-
-    ConnectionPoolConfiguration getConnectionPoolConfiguration();
-
-    DataSourceImplementation getDataSourceImplementation();
-
-    InterruptHandlingMode getInterruptHandlingMode();
-
-    TransactionIsolation getTransactionIsolation();
-
-    // TODO: Security ( here or ConnectionFactoryConfiguration ??? )
+    DataSourceImplementation dataSourceImplementation();
 
     // --- //
 
-    boolean getMetricsEnabled();
+    boolean metricsEnabled();
     void setMetricsEnabled(boolean metricsEnabled);
 
     // --- //
 
     enum DataSourceImplementation {
         WILDFLY, HIKARI
-    }
-
-    enum InterruptHandlingMode {
-        AUTO, ON, OFF
-    }
-
-    enum TransactionIsolation {
-        NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
     }
 
 }

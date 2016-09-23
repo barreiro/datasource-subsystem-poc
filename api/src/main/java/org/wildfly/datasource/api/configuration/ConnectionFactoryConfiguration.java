@@ -22,26 +22,33 @@
 
 package org.wildfly.datasource.api.configuration;
 
-import java.sql.Driver;
-
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
 public interface ConnectionFactoryConfiguration {
 
-    boolean getAutoCommit();
+    boolean autoCommit();
 
-    String getUsername();
+    String username();
 
-    String getPassword();
+    String password();
 
-    String getJdbcUrl();
+    String jdbcUrl();
 
-    // TODO: either provide a driver class or both a driver class name and classloader
+    String initSql();
 
-    Class<? extends Driver> getDriverClass();
+    String driverClassName();
 
-    String getDriverClassName();
-    ClassLoaderProvider getClassLoaderProvider();
+    ClassLoaderProvider classLoaderProvider();
+
+    TransactionIsolation transactionIsolation();
+
+    // TODO: Security
+
+    // --- //
+
+    enum TransactionIsolation {
+        NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+    }
 
 }

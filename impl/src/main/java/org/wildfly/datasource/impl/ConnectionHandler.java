@@ -20,45 +20,69 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.impl.handler;
+package org.wildfly.datasource.impl;
 
 import java.sql.Connection;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
 public class ConnectionHandler {
 
-    public enum Status {
+    public enum State {
         NEW, CHECKED_IN, CHECKED_OUT, TO_DESTROY, DESTROYED
     }
 
-    private final Connection connection;
+    private Connection connection;
 
-    private Status status;
+    // state can be concurrently modified by housekeeping tasks
+    private final AtomicReference<State> state;
 
     // for leak detection (only valid for CHECKED_OUT connections)
     private Thread holdingThread;
 
-    // for expiration
+    // for expiration (CHECKED_IN connections) and leak detection (CHECKED_OUT connections)
     private long lastAccess;
 
     public ConnectionHandler(Connection connection) {
         this.connection = connection;
-        status = Status.NEW;
+        state = new AtomicReference<>( State.NEW );
         lastAccess = System.currentTimeMillis();
+    }
+
+    // package private -- to be used only during initialization
+    void setConnection(Connection connection) {
+        if ( !( state.get() == State.NEW ) ) {
+            throw new IllegalStateException( "" );
+        }
+        this.connection = connection;
     }
 
     public Connection getConnection() {
         return connection;
     }
 
-    public Status getStatus() {
-        return status;
+    public State getState() {
+        return state.get();
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
+    public boolean setState(State newState) {
+        State oldState = state.get();
+        switch ( newState ) {
+            default:
+                throw new IllegalArgumentException( "Trying to set invalid state " + newState );
+            case NEW:
+                throw new IllegalArgumentException( "Trying to set invalid state NEW" );
+            case CHECKED_IN:
+                return ( oldState == State.NEW || oldState == State.CHECKED_OUT ) && state.compareAndSet( oldState, newState );
+            case CHECKED_OUT:
+                return ( oldState == State.CHECKED_IN ) && state.compareAndSet( oldState, newState );
+            case TO_DESTROY:
+                return ( oldState == State.NEW || oldState == State.CHECKED_IN || oldState == State.CHECKED_OUT ) && state.compareAndSet( oldState, newState );
+            case DESTROYED:
+                return ( oldState == State.TO_DESTROY ) && state.compareAndSet( oldState, newState );
+        }
     }
 
     public long getLastAccess() {
