@@ -44,6 +44,8 @@ public interface WildFlyDataSourceListener {
 
     default void onConnectionValidation(Connection connection) {}
 
+    default void onConnectionLeak(Connection connection) {}
+
     default void onConnectionTimeout(Connection connection) {}
 
     default void onConnectionClose(Connection connection) {}
@@ -89,6 +91,12 @@ public interface WildFlyDataSourceListener {
     static void fireOnConnectionValidation(List<WildFlyDataSourceListener> listeners, Connection connection) {
         for ( WildFlyDataSourceListener listener : listeners ) {
             listener.onConnectionValidation( connection );
+        }
+    }
+
+    static void fireOnConnectionLeak(List<WildFlyDataSourceListener> listeners, Connection connection) {
+        for ( WildFlyDataSourceListener listener : listeners ) {
+            listener.onConnectionLeak( connection );
         }
     }
 

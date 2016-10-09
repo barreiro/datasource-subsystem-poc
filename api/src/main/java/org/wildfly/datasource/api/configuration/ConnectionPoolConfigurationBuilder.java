@@ -22,6 +22,8 @@
 
 package org.wildfly.datasource.api.configuration;
 
+import org.wildfly.datasource.impl.ConnectionValidator;
+
 import java.util.function.Consumer;
 
 /**
@@ -37,8 +39,9 @@ public class ConnectionPoolConfigurationBuilder {
     private String connectionInitSql = "";
     private volatile int minSize = 0;
     private volatile int maxSize = 0;
-    private long connectionValidationTimeout = 60_000;
-    private long connectionReapTimeout = 600_000;
+    private ConnectionValidator connectionValidator;
+    private long connectionValidationTimeout = 60;
+    private long connectionReapTimeout = 600;
     private volatile int acquisitionTimeout = 1_000;
     private ConnectionPoolConfiguration.InterruptHandlingMode interruptHandlingMode;
 
@@ -84,6 +87,10 @@ public class ConnectionPoolConfigurationBuilder {
 
     public ConnectionPoolConfigurationBuilder setInterruptHandlingMode(ConnectionPoolConfiguration.InterruptHandlingMode interruptHandlingMode) {
         return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
+    }
+
+    public ConnectionPoolConfigurationBuilder setConnectionValidator(ConnectionValidator connectionValidator) {
+        return applySetting( c -> c.connectionValidator = connectionValidator );
     }
 
     public ConnectionPoolConfigurationBuilder setConnectionValidationTimeout(long connectionValidationTimeout) {
@@ -162,6 +169,14 @@ public class ConnectionPoolConfigurationBuilder {
             @Override
             public InterruptHandlingMode interruptHandlingMode() {
                 return interruptHandlingMode;
+            }
+
+            @Override
+            public ConnectionValidator connectionValidator() {
+                if ( connectionValidator == null ) {
+                    return new ConnectionValidator.EMPTY_VALIDATOR();
+                }
+                return connectionValidator;
             }
 
             @Override

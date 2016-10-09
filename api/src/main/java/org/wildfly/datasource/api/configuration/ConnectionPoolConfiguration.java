@@ -22,6 +22,8 @@
 
 package org.wildfly.datasource.api.configuration;
 
+import org.wildfly.datasource.impl.ConnectionValidator;
+
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
@@ -36,6 +38,8 @@ public interface ConnectionPoolConfiguration {
     InterruptHandlingMode interruptHandlingMode();
 
     ConnectionFactoryConfiguration connectionFactoryConfiguration();
+
+    ConnectionValidator connectionValidator();
 
     long connectionValidationTimeout();
 
