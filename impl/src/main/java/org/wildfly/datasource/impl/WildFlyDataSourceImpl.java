@@ -104,8 +104,7 @@ public class WildFlyDataSourceImpl implements WildFlyDataSource {
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        // TODO: log user/pass ignored in pooled data source
-        return getConnection();
+        throw new SQLException( "username/password invalid on a pooled data souce" );
     }
 
     // --- Wrapper methods //

@@ -39,6 +39,7 @@ public class ConnectionFactoryConfigurationBuilder {
     private String driverClassName = "";
     private ClassLoaderProvider classLoaderProvider;
     private ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation;
+    private ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode;
 
     public ConnectionFactoryConfigurationBuilder() {
         this.lock = false;
@@ -93,6 +94,10 @@ public class ConnectionFactoryConfigurationBuilder {
         return applySetting( c -> c.transactionIsolation = transactionIsolation );
     }
 
+    public ConnectionFactoryConfigurationBuilder setInterruptHandlingMode(ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode) {
+        return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
+    }
+
     public ConnectionFactoryConfiguration build() {
         this.lock = true;
 
@@ -138,6 +143,10 @@ public class ConnectionFactoryConfigurationBuilder {
                 return transactionIsolation;
             }
 
+            @Override
+            public InterruptHandlingMode interruptHandlingMode() {
+                return interruptHandlingMode != null ? interruptHandlingMode : InterruptHandlingMode.OFF;
+            }
         };
 
     }

@@ -25,7 +25,6 @@ package org.wildfly.datasource.impl;
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -95,11 +94,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
         while ( allConnections.size() < size ) {
             housekeepingExecutor.submit( () -> {
                 if ( allConnections.size() < size ) {
-                    try {
-                        newConnectionHandler();
-                    } catch ( SQLException e ) {
-                        // TODO: Log
-                    }
+                    newConnectionHandler();
                 }
             } );
         }
@@ -112,7 +107,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
 
     // --- //
 
-    private void newConnectionHandler() throws SQLException {
+    private void newConnectionHandler() {
         housekeepingExecutor.submit( () -> {
             if ( allConnections.size() >= configuration.maxSize() ) {
                 return;
@@ -133,6 +128,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
                 dataSource.metricsRegistry().afterConnectionCreated( metricsStamp );
             } catch ( SQLException e ) {
                 // TODO: woops!
+                // cache exception and interrupt pool
             }
         } );
     }
@@ -202,7 +198,8 @@ public class ConnectionPoolImpl implements AutoCloseable {
         while ( value > oldMax ) {
             if ( maxUsedCounter.compareAndSet( oldMax, value ) ) {
                 break;
-            } else {
+            }
+            else {
                 // concurrent modification -- retry
                 oldMax = maxUsedCounter.longValue();
             }
@@ -260,27 +257,21 @@ public class ConnectionPoolImpl implements AutoCloseable {
             WildFlyDataSourceListener.fireOnConnectionValidation( dataSource.listenerList(), handler.getConnection() );
 
             if ( handler.getState() == ConnectionHandler.State.CHECKED_IN ) {
-                if ( ! configuration.connectionValidator().isValid( handler.getConnection() ) ) {
-                    handler.setState( ConnectionHandler.State.TO_DESTROY );
-                    closeInvalidConnection( handler.getConnection() );
-                    handler.setState( ConnectionHandler.State.DESTROYED );
-                    allConnections.remove( handler );
-                }
-                else {
+                if ( configuration.connectionValidator().isValid( handler.getConnection() ) ) {
                     // TODO: all good!
                     //System.out.println( "Valid connection " + handler.getConnection() );
+                } else {
+                    handler.setState( ConnectionHandler.State.TO_DESTROY );
+                    closeInvalidConnection( handler );
+                    handler.setState( ConnectionHandler.State.DESTROYED );
+                    allConnections.remove( handler );
                 }
             }
         }
 
-        private void closeInvalidConnection( Connection connection ) {
+        private void closeInvalidConnection( ConnectionHandler connectionWrapper ) {
             try {
-                if ( connection instanceof Proxy ) {
-                    connection.unwrap( Connection.class ).close();
-                }
-                else {
-                    connection.close();
-                }
+                connectionWrapper.closeUnderlyingConnection();
             } catch ( SQLException e ) {
                 // Ignore
             }
@@ -304,8 +295,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
                         housekeepingExecutor.schedule( new ReapTask( handler ), ++i * REAP_INTERVAL_MS, TimeUnit.MILLISECONDS );
                     }
                 }
-            }
-            finally {
+            } finally {
                 long timeOffset = ( ++i * REAP_INTERVAL_MS ) / 1000;
                 housekeepingExecutor.schedule( this, timeOffset + configuration.connectionReapTimeout(), TimeUnit.SECONDS );
             }
@@ -328,7 +318,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
                     WildFlyDataSourceListener.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
 
                     handler.setState( ConnectionHandler.State.TO_DESTROY );
-                    closeIdleConnection( handler.getConnection() );
+                    closeIdleConnection( handler );
                     handler.setState( ConnectionHandler.State.DESTROYED );
                     allConnections.remove( handler );
                 }
@@ -339,14 +329,9 @@ public class ConnectionPoolImpl implements AutoCloseable {
             }
         }
 
-        private void closeIdleConnection( Connection connection ) {
+        private void closeIdleConnection( ConnectionHandler handler ) {
             try {
-                if ( connection instanceof Proxy ) {
-                    connection.unwrap( Connection.class ).close();
-                }
-                else {
-                    connection.close();
-                }
+                handler.closeUnderlyingConnection();
             } catch ( SQLException e ) {
                 // Ignore
             }

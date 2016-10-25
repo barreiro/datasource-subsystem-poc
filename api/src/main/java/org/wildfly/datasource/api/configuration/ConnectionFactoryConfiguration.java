@@ -43,12 +43,18 @@ public interface ConnectionFactoryConfiguration {
 
     TransactionIsolation transactionIsolation();
 
+    InterruptHandlingMode interruptHandlingMode();
+
     // TODO: Security
 
     // --- //
 
     enum TransactionIsolation {
         NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+    }
+
+    enum InterruptHandlingMode {
+        AUTO, ON, OFF
     }
 
 }

@@ -22,7 +22,7 @@
 
 package org.wildfly.datasource.api.configuration;
 
-import org.wildfly.datasource.impl.ConnectionValidator;
+import org.wildfly.datasource.api.ConnectionValidator;
 
 import java.util.function.Consumer;
 
@@ -43,7 +43,6 @@ public class ConnectionPoolConfigurationBuilder {
     private long connectionValidationTimeout = 60;
     private long connectionReapTimeout = 600;
     private volatile int acquisitionTimeout = 1_000;
-    private ConnectionPoolConfiguration.InterruptHandlingMode interruptHandlingMode;
 
     public ConnectionPoolConfigurationBuilder() {
         this.lock = false;
@@ -83,10 +82,6 @@ public class ConnectionPoolConfigurationBuilder {
 
     public ConnectionPoolConfigurationBuilder setAcquisitionTimeout(int acquisitionTimeout) {
         return applySetting( c -> c.acquisitionTimeout = acquisitionTimeout );
-    }
-
-    public ConnectionPoolConfigurationBuilder setInterruptHandlingMode(ConnectionPoolConfiguration.InterruptHandlingMode interruptHandlingMode) {
-        return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
     }
 
     public ConnectionPoolConfigurationBuilder setConnectionValidator(ConnectionValidator connectionValidator) {
@@ -164,11 +159,6 @@ public class ConnectionPoolConfigurationBuilder {
             @Override
             public void setAcquisitionTimeout(int timeout) {
                 acquisitionTimeout = timeout;
-            }
-
-            @Override
-            public InterruptHandlingMode interruptHandlingMode() {
-                return interruptHandlingMode;
             }
 
             @Override

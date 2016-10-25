@@ -22,21 +22,60 @@
 
 package org.wildfly.datasource.impl;
 
-import java.sql.Connection;
+import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
+
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface ConnectionValidator {
+public abstract class InterruptProtection {
 
-    class EMPTY_VALIDATOR implements ConnectionValidator {
+    @FunctionalInterface
+    interface SQLRunnable {
 
-        public boolean isValid(Connection connection) {
-            return true;
-        }
+        void run() throws SQLException;
 
     }
 
-    boolean isValid(Connection connection);
+    @FunctionalInterface
+    interface SQLCallable<T> {
+
+        T call() throws SQLException;
+
+    }
+
+    // --- //
+
+    public static InterruptProtection from(ConnectionFactoryConfiguration.InterruptHandlingMode mode) {
+        switch ( mode ) {
+            case AUTO:
+            case OFF:
+                return NONE;
+            case ON:
+                throw new RuntimeException( "Not implemented" );
+        }
+        return null;
+    }
+
+    // --- //
+
+    public void protect(SQLRunnable runnable) throws SQLException {
+        protect( () -> runnable );
+
+    }
+
+    public abstract <T> T protect(SQLCallable<T> callable) throws SQLException;
+
+    // --- //
+
+    private static InterruptProtection NONE = new InterruptProtection() {
+
+        @Override
+        public <T> T protect(SQLCallable<T> callable) throws SQLException {
+            return callable.call();
+        }
+
+    };
 
 }

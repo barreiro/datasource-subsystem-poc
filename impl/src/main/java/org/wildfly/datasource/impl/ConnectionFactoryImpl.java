@@ -24,7 +24,6 @@ package org.wildfly.datasource.impl;
 
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
 
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
@@ -35,10 +34,10 @@ import java.sql.SQLException;
 public class ConnectionFactoryImpl {
 
     private static String CONNECTION_CLOSE_METHOD_NAME = "close";
-    private static String CONNECTION_UNWRAP_METHOD_NAME = "unwrap";
-    private static String CONNECTION_WRAPPER_METHOD_NAME = "isWrapperFor";
 
     private ConnectionPoolImpl poolImpl;
+
+    private InterruptProtection interruptProtection;
 
     private ConnectionFactoryConfiguration configuration;
 
@@ -50,6 +49,7 @@ public class ConnectionFactoryImpl {
     public ConnectionFactoryImpl(ConnectionFactoryConfiguration configuration, ConnectionPoolImpl poolImpl) {
         this.configuration = configuration;
         this.poolImpl = poolImpl;
+        this.interruptProtection = InterruptProtection.from(configuration.interruptHandlingMode());
 
         try {
             driverLoader = configuration.classLoaderProvider().getClassLoader( configuration.driverClassName() );
@@ -64,19 +64,7 @@ public class ConnectionFactoryImpl {
         Connection connection = driver.connect( configuration.jdbcUrl(), null );
         connection.setAutoCommit( configuration.autoCommit() );
         connection.createStatement().execute( configuration.initSql() );
-
-        ConnectionHandler handler = new ConnectionHandler( connection );
-
-        // We return a proxy that intercepts the close() calls and return the connection to the pool
-        Connection intercepted = (Connection) Proxy.newProxyInstance( driverLoader, new Class[]{Connection.class}, (proxy, method, args) -> {
-            if ( CONNECTION_CLOSE_METHOD_NAME.equals( method.getName() ) ) {
-                poolImpl.returnConnection( handler );
-            }
-            return method.invoke( connection, args );
-        } );
-
-        handler.setConnection( intercepted );
-        return handler;
+        return new ConnectionHandler( poolImpl, interruptProtection, connection );
     }
 
 }

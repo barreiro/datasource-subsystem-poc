@@ -20,50 +20,23 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api;
 
-import org.wildfly.datasource.api.ConnectionValidator;
+import java.sql.Connection;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface ConnectionPoolConfiguration {
+public interface ConnectionValidator {
 
-    PoolImplementation poolImplementation();
+    class EMPTY_VALIDATOR implements ConnectionValidator {
 
-    PreFillMode preFillMode();
+        public boolean isValid(Connection connection) {
+            return true;
+        }
 
-    String connectionInitSql();
-
-    ConnectionFactoryConfiguration connectionFactoryConfiguration();
-
-    ConnectionValidator connectionValidator();
-
-    long connectionValidationTimeout();
-
-    long connectionReapTimeout();
-
-    // --- Mutable attributes
-
-    int minSize();
-    void setMinSize(int size);
-
-    int maxSize();
-    void setMaxSize(int size);
-
-    int acquisitionTimeout();
-    void setAcquisitionTimeout(int timeout);
-
-    // TODO: Allow registration of listeners for changes ?!?!
-
-    // --- //
-
-    enum PoolImplementation {
-        DEFAULT, BLOCKING_QUEUE, LOCK_FREE
     }
 
-    enum PreFillMode {
-        OFF, MIN, MAX
-    }
+    boolean isValid(Connection connection);
 
 }
