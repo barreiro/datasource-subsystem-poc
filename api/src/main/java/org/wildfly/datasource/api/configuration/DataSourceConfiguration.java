@@ -33,6 +33,8 @@ public interface DataSourceConfiguration {
 
     DataSourceImplementation dataSourceImplementation();
 
+    boolean isXA();
+
     // --- //
 
     boolean metricsEnabled();

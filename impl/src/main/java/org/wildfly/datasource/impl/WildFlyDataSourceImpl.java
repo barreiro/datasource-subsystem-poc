@@ -27,6 +27,7 @@ import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.WildFlyDataSourceMetrics;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 
+import javax.sql.XAConnection;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -104,6 +105,24 @@ public class WildFlyDataSourceImpl implements WildFlyDataSource {
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
+        throw new SQLException( "username/password invalid on a pooled data souce" );
+    }
+
+    // --- XADataSource methods //
+
+    @Override
+    public XAConnection getXAConnection() throws SQLException {
+        if ( !configuration.isXA() ) {
+            throw new UnsupportedOperationException( "Unsupported" );
+        }
+        return null;
+    }
+
+    @Override
+    public XAConnection getXAConnection(String user, String password) throws SQLException {
+        if ( !configuration.isXA() ) {
+            throw new UnsupportedOperationException( "Unsupported" );
+        }
         throw new SQLException( "username/password invalid on a pooled data souce" );
     }
 

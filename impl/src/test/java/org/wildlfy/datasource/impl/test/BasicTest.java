@@ -3,7 +3,6 @@ package org.wildlfy.datasource.impl.test;
 import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
-import org.wildfly.datasource.api.WildFlyDataSourceFactory;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
@@ -26,9 +25,8 @@ public class BasicTest {
 
     @Test
     public void basicTest() throws SQLException {
-        DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
-
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .setMinSize( 5 )
                         .setMaxSize( 10 )
@@ -36,13 +34,10 @@ public class BasicTest {
                         .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .setDriverClassName( H2_DRIVER_CLASS )
                                 .setJdbcUrl( H2_JDBC_URL )
-                                .build()
                         )
-                        .build()
-                )
-                .build();
+                );
 
-        try( WildFlyDataSource dataSource = WildFlyDataSourceFactory.create( dataSourceConfiguration ) ) {
+        try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             for ( int i = 0; i < 50; i++ ) {
                 Connection connection = dataSource.getConnection();
                 System.out.println( "connection = " + connection );
@@ -53,7 +48,7 @@ public class BasicTest {
 
     @Test
     public void basicConcurrentTest() throws SQLException {
-        DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
@@ -63,11 +58,8 @@ public class BasicTest {
                         .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .setDriverClassName( H2_DRIVER_CLASS )
                                 .setJdbcUrl( H2_JDBC_URL )
-                                .build()
                         )
-                        .build()
-                )
-                .build();
+                );
 
         int THREAD_POOL_SIZE = 15;
         int CALLS = 500;
@@ -75,7 +67,7 @@ public class BasicTest {
 
         ExecutorService executor = Executors.newFixedThreadPool( THREAD_POOL_SIZE );
 
-        try ( WildFlyDataSource dataSource = WildFlyDataSourceFactory.create( dataSourceConfiguration ) ) {
+        try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             CountDownLatch latch = new CountDownLatch( CALLS );
 
             for ( int i = 0; i < CALLS; i++ ) {

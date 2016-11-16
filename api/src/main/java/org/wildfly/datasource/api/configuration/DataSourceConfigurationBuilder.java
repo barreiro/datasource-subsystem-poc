@@ -34,7 +34,7 @@ public class DataSourceConfigurationBuilder {
     private String jndiName = "";
     private ConnectionPoolConfiguration connectionPoolConfiguration;
     private DataSourceConfiguration.DataSourceImplementation dataSourceImplementation = DataSourceConfiguration.DataSourceImplementation.WILDFLY;
-
+    private boolean isXA;
 
     private volatile boolean metricsEnabled = false;
 
@@ -57,8 +57,16 @@ public class DataSourceConfigurationBuilder {
         return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfiguration );
     }
 
+    public DataSourceConfigurationBuilder setConnectionPoolConfiguration(ConnectionPoolConfigurationBuilder connectionPoolConfigurationBuilder) {
+        return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfigurationBuilder.build() );
+    }
+
     public DataSourceConfigurationBuilder setDataSourceImplementation(DataSourceConfiguration.DataSourceImplementation dataSourceImplementation) {
         return applySetting( c -> c.dataSourceImplementation = dataSourceImplementation );
+    }
+
+    public DataSourceConfigurationBuilder setXA(boolean isXA) {
+        return applySetting( c -> c.isXA = isXA );
     }
 
     public DataSourceConfigurationBuilder setMetricsEnabled(boolean metricsEnabled) {
@@ -90,6 +98,11 @@ public class DataSourceConfigurationBuilder {
             @Override
             public DataSourceImplementation dataSourceImplementation() {
                 return dataSourceImplementation;
+            }
+
+            @Override
+            public boolean isXA() {
+                return isXA;
             }
 
             @Override

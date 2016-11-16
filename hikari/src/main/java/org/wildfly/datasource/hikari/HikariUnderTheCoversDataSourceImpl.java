@@ -31,6 +31,7 @@ import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 
+import javax.sql.XAConnection;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -123,6 +124,16 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
             listener.beforeConnectionAcquire();
         }
         return hikari.getConnection( username, password );
+    }
+
+    @Override
+    public XAConnection getXAConnection() throws SQLException {
+        throw new UnsupportedOperationException( "Unsupported" );
+    }
+
+    @Override
+    public XAConnection getXAConnection(String user, String password) throws SQLException {
+        throw new UnsupportedOperationException( "Unsupported" );
     }
 
     @Override

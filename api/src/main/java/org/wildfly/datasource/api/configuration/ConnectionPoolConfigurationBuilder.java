@@ -64,6 +64,10 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfiguration );
     }
 
+    public ConnectionPoolConfigurationBuilder setConnectionFactoryConfiguration(ConnectionFactoryConfigurationBuilder connectionFactoryConfigurationBuilder) {
+        return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfigurationBuilder.build() );
+    }
+
     public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
         return applySetting( c -> c.preFillMode = preFillMode );
     }
@@ -164,7 +168,7 @@ public class ConnectionPoolConfigurationBuilder {
             @Override
             public ConnectionValidator connectionValidator() {
                 if ( connectionValidator == null ) {
-                    return new ConnectionValidator.EMPTY_VALIDATOR();
+                    return ConnectionValidator.emptyValidator();
                 }
                 return connectionValidator;
             }

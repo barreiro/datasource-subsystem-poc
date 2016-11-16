@@ -168,9 +168,12 @@ public class ConnectionPoolImpl implements AutoCloseable {
 
     public void returnConnection(ConnectionHandler handler) {
         ConnectionHandler.State state = handler.getState();
-        prepareHandlerForCheckIn( handler );
         if ( state == ConnectionHandler.State.CHECKED_OUT ) {
+            prepareHandlerForCheckIn( handler );
             connectionPool.checkIn( handler );
+        }
+        else {
+            usedCounter.decrement();
         }
     }
 

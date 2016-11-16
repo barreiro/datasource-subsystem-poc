@@ -59,7 +59,7 @@ public interface ConnectionPoolConfiguration {
     // --- //
 
     enum PoolImplementation {
-        DEFAULT, BLOCKING_QUEUE, LOCK_FREE
+        DEFAULT, BLOCKING_QUEUE, LOCK_FREE, SEMAPHORE, FAST_BAG
     }
 
     enum PreFillMode {

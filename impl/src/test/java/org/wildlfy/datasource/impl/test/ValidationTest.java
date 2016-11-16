@@ -3,7 +3,6 @@ package org.wildlfy.datasource.impl.test;
 import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
-import org.wildfly.datasource.api.WildFlyDataSourceFactory;
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
@@ -28,7 +27,7 @@ public class ValidationTest {
 
     @Test
     public void basicValidationTest() throws SQLException {
-        DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
@@ -39,16 +38,13 @@ public class ValidationTest {
                         .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .setDriverClassName( H2_DRIVER_CLASS )
                                 .setJdbcUrl( H2_JDBC_URL )
-                                .build()
                         )
-                        .build()
-                )
-                .build();
+                );
 
         int CALLS = 500;
 
-        try( WildFlyDataSource dataSource = WildFlyDataSourceFactory.create( dataSourceConfiguration ) ) {
-            CountDownLatch latch = new CountDownLatch( dataSourceConfiguration.connectionPoolConfiguration().maxSize() );
+        try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
+            CountDownLatch latch = new CountDownLatch( dataSource.getConfiguration().connectionPoolConfiguration().maxSize() );
 
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
@@ -79,7 +75,7 @@ public class ValidationTest {
 
     @Test
     public void basicLeakTest() throws SQLException {
-        DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
@@ -90,15 +86,12 @@ public class ValidationTest {
                         .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .setDriverClassName( H2_DRIVER_CLASS )
                                 .setJdbcUrl( H2_JDBC_URL )
-                                .build()
                         )
-                        .build()
-                )
-                .build();
+                );
 
         int CALLS = 5;
 
-        try ( WildFlyDataSource dataSource = WildFlyDataSourceFactory.create( dataSourceConfiguration ) ) {
+        try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             CountDownLatch latch = new CountDownLatch( CALLS );
 
             dataSource.addListener( new WildFlyDataSourceListener() {
@@ -130,7 +123,7 @@ public class ValidationTest {
 
     @Test
     public void basicReapTest() throws SQLException {
-        DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
@@ -141,11 +134,8 @@ public class ValidationTest {
                         .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .setDriverClassName( H2_DRIVER_CLASS )
                                 .setJdbcUrl( H2_JDBC_URL )
-                                .build()
                         )
-                        .build()
-                )
-                .build();
+                );
 
         int THREAD_POOL_SIZE = 25;
         int CALLS = 500;
@@ -153,7 +143,7 @@ public class ValidationTest {
 
         ExecutorService executor = Executors.newFixedThreadPool( THREAD_POOL_SIZE );
 
-        try ( WildFlyDataSource dataSource = WildFlyDataSourceFactory.create( dataSourceConfiguration ) ) {
+        try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             CountDownLatch latch = new CountDownLatch( CALLS );
 
             dataSource.addListener( new WildFlyDataSourceListener() {
@@ -188,8 +178,8 @@ public class ValidationTest {
 
             System.out.println( dataSource.getMetrics() );
 
-            long minSize = dataSourceConfiguration.connectionPoolConfiguration().minSize();
-            long maxSize = dataSourceConfiguration.connectionPoolConfiguration().maxSize();
+            long minSize = dataSource.getConfiguration().connectionPoolConfiguration().minSize();
+            long maxSize = dataSource.getConfiguration().connectionPoolConfiguration().maxSize();
             Assert.assertEquals( minSize, dataSource.getMetrics().availableCount() );
             Assert.assertTrue( maxSize - minSize <= dataSource.getMetrics().timedOutCount() );
         }

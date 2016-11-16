@@ -2,7 +2,6 @@ package org.wildfly.datasource.hikari.test;
 
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
-import org.wildfly.datasource.api.WildFlyDataSourceFactory;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
@@ -21,20 +20,18 @@ public class BasicTest {
 
     @Test
     public void basicTest() throws SQLException {
-        DataSourceConfiguration dataSourceConfiguration = new DataSourceConfigurationBuilder()
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.HIKARI )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .setDriverClassName( H2_DRIVER_CLASS )
                                 .setJdbcUrl( H2_JDBC_URL )
-                                .build()
                         )
                         .setMaxSize( 10 )
-                        .build()
-                )
-                .build();
+                        .setConnectionValidationTimeout( 2000 )
+                );
 
-        try( WildFlyDataSource dataSource = WildFlyDataSourceFactory.create( dataSourceConfiguration ) ) {
+        try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             for ( int i = 0; i < 50; i++ ) {
                 Connection connection = dataSource.getConnection();
                 System.out.println( "connection = " + connection );

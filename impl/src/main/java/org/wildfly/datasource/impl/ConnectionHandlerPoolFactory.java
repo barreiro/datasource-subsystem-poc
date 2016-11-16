@@ -23,8 +23,10 @@
 package org.wildfly.datasource.impl;
 
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
+import org.wildfly.datasource.impl.pool.FastBag;
 import org.wildfly.datasource.impl.pool.LinkedBlockingQueuePool;
 import org.wildfly.datasource.impl.pool.LockFreeExchangePool;
+import org.wildfly.datasource.impl.pool.SemaphoreConcurrentLinkedQueuePool;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -38,13 +40,16 @@ public class ConnectionHandlerPoolFactory {
           switch ( configuration.poolImplementation() ) {
                default:
                case DEFAULT:
-               case BLOCKING_QUEUE: {
+               case BLOCKING_QUEUE:
                     return new LinkedBlockingQueuePool<>();
-               }
-               case LOCK_FREE: {
+               case LOCK_FREE:
                     return new LockFreeExchangePool<>();
-               }
+               case SEMAPHORE:
+                    return new SemaphoreConcurrentLinkedQueuePool<>();
+               case FAST_BAG:
+                    return new FastBag<>();
           }
+
      }
 
 }

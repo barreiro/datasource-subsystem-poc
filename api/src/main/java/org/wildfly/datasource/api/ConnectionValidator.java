@@ -23,20 +23,29 @@
 package org.wildfly.datasource.api;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
 public interface ConnectionValidator {
 
-    class EMPTY_VALIDATOR implements ConnectionValidator {
+    boolean isValid(Connection connection);
 
-        public boolean isValid(Connection connection) {
-            return true;
-        }
+    // --- //
 
+    static ConnectionValidator defaultValidator() {
+        return connection -> {
+            try {
+                return connection.isValid( 0 );
+            } catch ( SQLException e ) {
+                return false;
+            }
+        };
     }
 
-    boolean isValid(Connection connection);
+    static ConnectionValidator emptyValidator() {
+        return connection -> true;
+    }
 
 }

@@ -23,13 +23,18 @@
 package org.wildfly.datasource.api;
 
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
+import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import javax.sql.DataSource;
+import javax.sql.XADataSource;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends DataSource, AutoCloseable {
+public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSource {
 
     DataSourceConfiguration getConfiguration();
 
@@ -39,5 +44,37 @@ public interface WildFlyDataSource extends DataSource, AutoCloseable {
 
     @Override
     void close();
+
+    // --- //
+
+    static WildFlyDataSource from(DataSourceConfigurationBuilder dataSourceConfigurationBuilder) throws SQLException {
+        return from( dataSourceConfigurationBuilder.build() );
+    }
+
+    static WildFlyDataSource from(DataSourceConfiguration dataSourceConfiguration) throws SQLException {
+        String className;
+        switch ( dataSourceConfiguration.dataSourceImplementation() ) {
+            default:
+            case WILDFLY:
+                className = "org.wildfly.datasource.impl.WildFlyDataSourceImpl";
+                break;
+            case HIKARI:
+                if ( dataSourceConfiguration.isXA() ) {
+                    throw new UnsupportedOperationException( "Unsupported" );
+                }
+                className = "org.wildfly.datasource.hikari.HikariUnderTheCoversDataSourceImpl";
+                break;
+        }
+
+        // refactor after java9 (private methods in interfaces)
+        try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            Class<?> dataSourceClass = classLoader.loadClass( className );
+            Constructor<?> dataSourceConstructor = dataSourceClass.getConstructor( DataSourceConfiguration.class );
+            return (WildFlyDataSource) dataSourceConstructor.newInstance( dataSourceConfiguration );
+        } catch ( ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e ) {
+            throw new SQLException( "could not load Data Source class", e );
+        }
+    }
 
 }
