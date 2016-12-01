@@ -42,7 +42,7 @@ public class ConnectionPoolConfigurationBuilder {
     private ConnectionValidator connectionValidator;
     private long connectionValidationTimeout = 60;
     private long connectionReapTimeout = 600;
-    private volatile int acquisitionTimeout = 1_000;
+    private volatile long acquisitionTimeout = 60_000;
 
     public ConnectionPoolConfigurationBuilder() {
         this.lock = false;
@@ -156,12 +156,12 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public int acquisitionTimeout() {
+            public long acquisitionTimeout() {
                 return acquisitionTimeout;
             }
 
             @Override
-            public void setAcquisitionTimeout(int timeout) {
+            public void setAcquisitionTimeout(long timeout) {
                 acquisitionTimeout = timeout;
             }
 

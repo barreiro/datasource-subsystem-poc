@@ -58,6 +58,9 @@ public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSour
             case WILDFLY:
                 className = "org.wildfly.datasource.impl.WildFlyDataSourceImpl";
                 break;
+            case INTEGRATED:
+                className = "org.wildfly.datasource.integrated.WildFlyDataSourceImpl";
+                break;
             case HIKARI:
                 if ( dataSourceConfiguration.isXA() ) {
                     throw new UnsupportedOperationException( "Unsupported" );

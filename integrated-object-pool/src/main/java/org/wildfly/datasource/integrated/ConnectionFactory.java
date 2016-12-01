@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.impl;
+package org.wildfly.datasource.integrated;
 
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
 
@@ -31,25 +31,18 @@ import java.sql.SQLException;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class ConnectionFactoryImpl {
+public class ConnectionFactory {
 
     private static String CONNECTION_CLOSE_METHOD_NAME = "close";
-
-    private ConnectionPoolImpl poolImpl;
-
-    private InterruptProtection interruptProtection;
 
     private ConnectionFactoryConfiguration configuration;
 
     private Driver driver;
 
     @SuppressWarnings("unchecked")
-    public ConnectionFactoryImpl(ConnectionFactoryConfiguration configuration, ConnectionPoolImpl poolImpl) {
-        this.configuration = configuration;
-        this.poolImpl = poolImpl;
-        this.interruptProtection = InterruptProtection.from(configuration.interruptHandlingMode());
-
+    public ConnectionFactory(ConnectionFactoryConfiguration configuration) {
         try {
+            this.configuration = configuration;
             ClassLoader driverLoader = configuration.classLoaderProvider().getClassLoader( configuration.driverClassName() );
             Class<Driver> driverClass = (Class<Driver>) driverLoader.loadClass( configuration.driverClassName() );
             driver = driverClass.newInstance();
@@ -62,7 +55,7 @@ public class ConnectionFactoryImpl {
         Connection connection = driver.connect( configuration.jdbcUrl(), null );
         connection.setAutoCommit( configuration.autoCommit() );
         connection.createStatement().execute( configuration.initSql() );
-        return new ConnectionHandler( poolImpl, interruptProtection, connection );
+        return new ConnectionHandler( connection );
     }
 
 }

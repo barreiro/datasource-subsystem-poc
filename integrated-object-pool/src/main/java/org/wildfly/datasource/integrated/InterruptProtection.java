@@ -20,69 +20,62 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
+package org.wildfly.datasource.integrated;
+
+import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
+
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSourceMetrics {
+public abstract class InterruptProtection {
 
-    default long createdCount() {
-        return 0;
+    @FunctionalInterface
+    interface SQLRunnable {
+
+        void run() throws SQLException;
+
     }
 
-    default double averageCreationTime(){
-        return 0;
-    }
+    @FunctionalInterface
+    interface SQLCallable<T> {
 
-    default long maxCreationTime(){
-        return 0;
-    }
+        T call() throws SQLException;
 
-    default long totalCreationTime(){
-        return 0;
-    }
-
-    default long destroyedCount(){
-        return 0;
-    }
-
-    default long timeoutCount(){
-        return 0;
     }
 
     // --- //
 
-    default long activeCount(){
-        return 0;
-    }
-
-    default long maxUsedCount(){
-        return 0;
-    }
-
-    default long availableCount(){
-        return 0;
-    }
-
-    default double averageBlockingTime(){
-        return 0;
-    }
-
-    default long maxBlockingTime(){
-        return 0;
-    }
-
-    default long totalBlockingTime(){
-        return 0;
-    }
-
-    default long awaitingCount(){
-        return 0;
+    public static InterruptProtection from(ConnectionFactoryConfiguration.InterruptHandlingMode mode) {
+        switch ( mode ) {
+            case AUTO:
+            case OFF:
+                return NONE;
+            case ON:
+                throw new RuntimeException( "Not implemented" );
+        }
+        return null;
     }
 
     // --- //
 
-    default void reset() {}
+    public void protect(SQLRunnable runnable) throws SQLException {
+        protect( () -> runnable );
+
+    }
+
+    public abstract <T> T protect(SQLCallable<T> callable) throws SQLException;
+
+    // --- //
+
+    private static InterruptProtection NONE = new InterruptProtection() {
+
+        @Override
+        public <T> T protect(SQLCallable<T> callable) throws SQLException {
+            return callable.call();
+        }
+
+    };
 
 }

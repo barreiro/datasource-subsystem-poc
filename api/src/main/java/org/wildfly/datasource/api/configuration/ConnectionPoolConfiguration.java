@@ -51,8 +51,8 @@ public interface ConnectionPoolConfiguration {
     int maxSize();
     void setMaxSize(int size);
 
-    int acquisitionTimeout();
-    void setAcquisitionTimeout(int timeout);
+    long acquisitionTimeout();
+    void setAcquisitionTimeout(long timeout);
 
     // TODO: Allow registration of listeners for changes ?!?!
 

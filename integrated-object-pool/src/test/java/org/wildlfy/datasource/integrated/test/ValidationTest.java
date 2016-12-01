@@ -1,4 +1,4 @@
-package org.wildlfy.datasource.impl.test;
+package org.wildlfy.datasource.integrated.test;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -28,10 +28,10 @@ public class ValidationTest {
     @Test
     public void basicValidationTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
+                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMinSize( 5 )
+                        .setMinSize( 10 )
                         .setMaxSize( 10 )
                         .setConnectionValidationTimeout( 2 )
                         .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
@@ -44,7 +44,7 @@ public class ValidationTest {
         int CALLS = 500;
 
         try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
-            CountDownLatch latch = new CountDownLatch( (int) dataSource.getConfiguration().connectionPoolConfiguration().maxSize() );
+            CountDownLatch latch = new CountDownLatch( dataSource.getConfiguration().connectionPoolConfiguration().maxSize() );
 
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
@@ -76,7 +76,7 @@ public class ValidationTest {
     @Test
     public void basicLeakTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
+                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .setMinSize( 7 )
@@ -124,7 +124,7 @@ public class ValidationTest {
     @Test
     public void basicReapTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
+                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
                 .setMetricsEnabled( true )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .setMinSize( 10 )

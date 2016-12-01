@@ -20,30 +20,35 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.integrated.util;
+
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface DataSourceConfiguration {
+public class HiLoScheduledThreadPoolExecutor extends ScheduledThreadPoolExecutor {
 
-    String jndiName();
-
-    ConnectionPoolConfiguration connectionPoolConfiguration();
-
-    DataSourceImplementation dataSourceImplementation();
-
-    boolean isXA();
-
-    // --- //
-
-    boolean metricsEnabled();
-    void setMetricsEnabled(boolean metricsEnabled);
-
-    // --- //
-
-    enum DataSourceImplementation {
-        WILDFLY, INTEGRATED, HIKARI
+    public HiLoScheduledThreadPoolExecutor(int corePoolSize) {
+        super( corePoolSize );
     }
 
+    public HiLoScheduledThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
+        super( corePoolSize, threadFactory );
+    }
+
+    public HiLoScheduledThreadPoolExecutor(int corePoolSize, RejectedExecutionHandler handler) {
+        super( corePoolSize, handler );
+    }
+
+    public HiLoScheduledThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+        super( corePoolSize, threadFactory, handler );
+    }
+
+    @Override
+    protected void afterExecute(Runnable r, Throwable t) {
+        super.afterExecute( r, t );
+    }
 }

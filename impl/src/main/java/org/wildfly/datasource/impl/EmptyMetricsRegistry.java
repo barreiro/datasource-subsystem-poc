@@ -57,7 +57,7 @@ public class EmptyMetricsRegistry implements WildFlyDataSourceMetricsRegistry {
     }
 
     @Override
-    public long averageCreationTime() {
+    public double averageCreationTime() {
         return 0;
     }
 
@@ -77,7 +77,7 @@ public class EmptyMetricsRegistry implements WildFlyDataSourceMetricsRegistry {
     }
 
     @Override
-    public long timedOutCount() {
+    public long timeoutCount() {
         return 0;
     }
 
@@ -97,7 +97,7 @@ public class EmptyMetricsRegistry implements WildFlyDataSourceMetricsRegistry {
     }
 
     @Override
-    public long averageBlockingTime() {
+    public double averageBlockingTime() {
         return 0;
     }
 
@@ -108,6 +108,11 @@ public class EmptyMetricsRegistry implements WildFlyDataSourceMetricsRegistry {
 
     @Override
     public long totalBlockingTime() {
+        return 0;
+    }
+
+    @Override
+    public long awaitingCount() {
         return 0;
     }
 

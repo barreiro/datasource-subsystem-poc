@@ -36,6 +36,7 @@
     <modules>
         <module>api</module>
         <module>impl</module>
+        <module>integrated-object-pool</module>
         <module>hikari</module>
 
         <module>benchmark</module>

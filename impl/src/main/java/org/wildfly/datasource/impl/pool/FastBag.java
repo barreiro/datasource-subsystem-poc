@@ -117,12 +117,7 @@ public class FastBag<T> implements BlockingPool<T> {
             this.sharedList = new CopyOnWriteArrayList<>();
             this.synchronizer = new SequenceSynchronizer();
             this.threadEntry = new ThreadLocal<>();
-            this.threadList = new ThreadLocal<FastList<BagEntry<B>>>() {
-                @Override
-                protected FastList<BagEntry<B>> initialValue() {
-                    return new FastList<>( BagEntry.class, 16 );
-                }
-            };
+            this.threadList = ThreadLocal.withInitial( () -> new FastList<>( BagEntry.class, 16 ) );
         }
 
         public void close() {
@@ -441,12 +436,12 @@ public class FastBag<T> implements BlockingPool<T> {
         private final class Synchronizer extends AbstractQueuedLongSynchronizer {
 
             @Override
-            protected long tryAcquireShared(final long seq) {
+            protected long tryAcquireShared(long seq) {
                 return sequence.sum() - ( seq + 1 );
             }
 
             @Override
-            protected boolean tryReleaseShared(final long unused) {
+            protected boolean tryReleaseShared(long unused) {
                 sequence.increment();
                 return true;
             }

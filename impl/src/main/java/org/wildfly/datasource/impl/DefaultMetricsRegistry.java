@@ -105,8 +105,8 @@ public class DefaultMetricsRegistry implements WildFlyDataSourceMetricsRegistry 
     }
 
     @Override
-    public long averageCreationTime() {
-        return createdDuration.longValue() / createdCount.longValue() / NANOS_TO_MILLI;
+    public double averageCreationTime() {
+        return (double) createdDuration.longValue() / createdCount.longValue() / NANOS_TO_MILLI;
     }
 
     @Override
@@ -125,7 +125,7 @@ public class DefaultMetricsRegistry implements WildFlyDataSourceMetricsRegistry 
     }
 
     @Override
-    public long timedOutCount() {
+    public long timeoutCount() {
         return timeoutCount.longValue();
     }
 
@@ -145,8 +145,8 @@ public class DefaultMetricsRegistry implements WildFlyDataSourceMetricsRegistry 
     }
 
     @Override
-    public long averageBlockingTime() {
-        return acquireDuration.longValue() / acquireCount.longValue() / NANOS_TO_MILLI;
+    public double averageBlockingTime() {
+        return (double) acquireDuration.longValue() / acquireCount.longValue() / NANOS_TO_MILLI;
     }
 
     @Override
@@ -157,6 +157,11 @@ public class DefaultMetricsRegistry implements WildFlyDataSourceMetricsRegistry 
     @Override
     public long totalBlockingTime() {
         return acquireDuration.longValue() / NANOS_TO_MILLI;
+    }
+
+    @Override
+    public long awaitingCount() {
+        return 0;
     }
 
     // --- //
