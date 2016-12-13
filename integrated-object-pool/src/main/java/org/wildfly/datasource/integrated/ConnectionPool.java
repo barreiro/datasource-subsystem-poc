@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.AbstractQueuedLongSynchronizer;
 
@@ -54,7 +53,14 @@ public class ConnectionPool implements AutoCloseable {
 
     private final WildFlyDataSourceImpl dataSource;
     private final ThreadLocal<UncheckedArrayList<ConnectionHandler>> localCache;
+
+//    private final ExposedCopyOnWriteArrayList<ConnectionHandler> allConnections;
+//    private final AtomicCopyOnWriteArrayList<ConnectionHandler> allConnections;
+//    private final AtomicReferenceCopyOnWriteArrayList<ConnectionHandler> allConnections;
+//    private final LockFreeCopyOnWriteArrayList<ConnectionHandler> allConnections;
+//    private final SynchronizedCopyOnWriteArrayList<ConnectionHandler> allConnections;
     private final StampedCopyOnWriteArrayList<ConnectionHandler> allConnections;
+
     private final PoolSynchronizer synchronizer = new PoolSynchronizer();
     private final ConnectionFactory connectionFactory;
     private final ScheduledExecutorService housekeepingExecutor;
@@ -67,10 +73,13 @@ public class ConnectionPool implements AutoCloseable {
         this.configuration = configuration;
         this.dataSource = dataSource;
 
-        //allConnections = new CopyOnWriteArrayList<>();
-        //allConnections = new AtomicCopyOnWriteArrayList<>( ConnectionHandler.class );
-        //allConnections = new LockFreeCopyOnWriteArrayList<>( ConnectionHandler.class );
+//        allConnections = new ExposedCopyOnWriteArrayList<>( ConnectionHandler.class );
+//        allConnections = new AtomicCopyOnWriteArrayList<>( ConnectionHandler.class );
+//        allConnections = new AtomicReferenceCopyOnWriteArrayList<>( ConnectionHandler.class );
+//        allConnections = new LockFreeCopyOnWriteArrayList<>( ConnectionHandler.class );
+//        allConnections = new SynchronizedCopyOnWriteArrayList<>( ConnectionHandler.class );
         allConnections = new StampedCopyOnWriteArrayList<>(ConnectionHandler.class);
+
         localCache = ThreadLocal.withInitial( () -> new UncheckedArrayList<ConnectionHandler>( ConnectionHandler.class ) );
         connectionFactory = new ConnectionFactory( configuration.connectionFactoryConfiguration() );
         housekeepingExecutor = Executors.newSingleThreadScheduledExecutor( Executors.defaultThreadFactory() );
@@ -181,7 +190,7 @@ public class ConnectionPool implements AutoCloseable {
     }
 
     private ConnectionHandler handlerFromSharedCache() throws SQLException {
-        long remaining = TimeUnit.MILLISECONDS.toNanos( configuration.acquisitionTimeout() );
+        long remaining = MILLISECONDS.toNanos( configuration.acquisitionTimeout() );
         remaining = remaining > 0 ? remaining : Long.MAX_VALUE;
         try {
             for ( ; ; ) {

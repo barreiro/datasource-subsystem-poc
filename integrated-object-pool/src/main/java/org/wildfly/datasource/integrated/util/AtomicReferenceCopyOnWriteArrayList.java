@@ -23,13 +23,14 @@
 package org.wildfly.datasource.integrated.util;
 
 import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Spliterator;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -38,32 +39,30 @@ import java.util.stream.Stream;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class AtomicCopyOnWriteArrayList<T> implements List<T> {
+public class AtomicReferenceCopyOnWriteArrayList<T> implements List<T> {
 
-    private volatile T[] data;
-
-    private final AtomicArray<AtomicCopyOnWriteArrayList, T> atomizer;
+    private AtomicReference<T[]> data;
 
     @SuppressWarnings( "unchecked" )
-    public AtomicCopyOnWriteArrayList(Class<? extends T> clazz) {
-        this.data = (T[]) Array.newInstance( clazz, 0 );
-        this.atomizer = AtomicArray.create( AtomicReferenceFieldUpdater.newUpdater( AtomicCopyOnWriteArrayList.class, Object[].class, "data"), (Class) clazz );
+    public AtomicReferenceCopyOnWriteArrayList(Class<? extends T> clazz) {
+        data = new AtomicReference<>();
+        data.set( (T[]) Array.newInstance( clazz, 0 ) );
     }
 
     // -- //
 
     public T[] getUnderlyingArray() {
-        return data;
+        return data.get();
     }
 
     @Override
     public T get(int index) {
-        return data[index];
+        return data.get()[index];
     }
 
     @Override
     public int size() {
-        return data.length;
+        return data.get().length;
     }
 
     @Override
@@ -80,30 +79,73 @@ public class AtomicCopyOnWriteArrayList<T> implements List<T> {
 
     @Override
     public boolean add(T element) {
-        atomizer.add( this, element );
+        T[] oldData, newData;
+        do {
+            oldData = data.get();
+            newData = Arrays.copyOf( oldData, oldData.length + 1 );
+            newData[oldData.length] = element;
+
+
+        } while ( !data.compareAndSet( oldData, newData ) );
         return true;
     }
 
     public T removeLast() {
-        throw new UnsupportedOperationException();
+        T[] oldData, newData;
+        while ( true ) {
+            oldData = data.get();
+            T element = oldData[oldData.length - 1];
+            newData = Arrays.copyOf( oldData, oldData.length - 1 );
+            if ( data.compareAndSet( oldData, newData ) ) {
+                return element;
+            }
+        }
     }
 
     @Override
     @SuppressWarnings( "unchecked" )
     public boolean remove(Object element) {
-        return atomizer.remove( this, (T) element, true );
+        do {
+            boolean retry = false;
+            T[] oldData = data.get();
+
+            for ( int index = oldData.length - 1; index >= 0; index-- ) {
+                if ( element == oldData[index] ) {
+
+                    T[] newData = Arrays.copyOf( oldData, oldData.length - 1 );
+                    System.arraycopy( oldData, index + 1, newData, index, oldData.length - index - 1 );
+
+                    if ( data.compareAndSet( oldData, newData ) ) {
+                        return true;
+                    }
+                    retry = true;
+                    break;
+                }
+            }
+            if ( !retry ) {
+                return false;
+            }
+        } while ( true );
     }
 
     @Override
-    @SuppressWarnings( "unchecked" )
     public void clear() {
-        atomizer.clear( this );
+        data.set( Arrays.copyOf( data.get(), 0 ) ); // retry
     }
 
     @Override
-    @SuppressWarnings( "unchecked" )
     public T remove(int index) {
-         throw new UnsupportedOperationException();
+        T[] oldData, newData;
+        T oldElement;
+        do {
+            oldData = data.get();
+            oldElement = oldData[index];
+            newData = Arrays.copyOf( oldData, oldData.length - 1 );
+            if ( oldData.length - index - 1 != 0 ) {
+                System.arraycopy(oldData, index + 1, newData, index, oldData.length - index - 1);
+            }
+        } while ( !data.compareAndSet( oldData, newData ) );
+        return oldElement;
     }
 
     @Override
@@ -211,6 +253,11 @@ public class AtomicCopyOnWriteArrayList<T> implements List<T> {
     }
 
     @Override
+    public Object clone() throws CloneNotSupportedException {
+        throw new CloneNotSupportedException();
+    }
+
+    @Override
     public Stream<T> stream() {
         throw new UnsupportedOperationException();
     }
@@ -243,121 +290,6 @@ public class AtomicCopyOnWriteArrayList<T> implements List<T> {
     @Override
     public void sort(Comparator<? super T> c) {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Object clone() throws CloneNotSupportedException {
-        super.clone();
-        throw new CloneNotSupportedException();
-    }
-
-    // --- //
-
-    /*
-     * From JBoss Threads
-     */
-    public static final class AtomicArray<T, V> {
-
-        private final AtomicReferenceFieldUpdater<T, V[]> updater;
-        private final V[] emptyArray;
-        private final Creator<V> creator;
-
-        private AtomicArray(AtomicReferenceFieldUpdater<T, V[]> updater, Creator<V> creator) {
-            this.updater = updater;
-            this.creator = creator;
-            emptyArray = creator.create(0);
-        }
-
-        public static <T, V> AtomicArray<T, V> create(AtomicReferenceFieldUpdater<T, V[]> updater, Class<V> componentType) {
-            return new AtomicArray<T,V>(updater, new ReflectCreator<V>(componentType));
-        }
-
-        public static <T, V> AtomicArray<T, V> create(AtomicReferenceFieldUpdater<T, V[]> updater, Creator<V> creator) {
-            return new AtomicArray<T,V>(updater, creator);
-        }
-
-        public void clear(T instance) {
-            updater.set(instance, emptyArray);
-        }
-
-
-        @SuppressWarnings({ "unchecked" })
-        private static <V> V[] copyOf(final AtomicArray.Creator<V> creator, V[] old, int newLen) {
-            final V[] target = creator.create(newLen);
-            System.arraycopy(old, 0, target, 0, Math.min(old.length, newLen));
-            return target;
-        }
-
-        public void add(T instance, V value) {
-            final AtomicReferenceFieldUpdater<T, V[]> updater = this.updater;
-            for (;;) {
-                final V[] oldVal = updater.get(instance);
-                final int oldLen = oldVal.length;
-                final V[] newVal = copyOf(creator, oldVal, oldLen + 1);
-                newVal[oldLen] = value;
-                if (updater.compareAndSet(instance, oldVal, newVal)) {
-                    return;
-                }
-            }
-        }
-
-        public boolean remove(T instance, V value, boolean identity) {
-            final AtomicReferenceFieldUpdater<T, V[]> updater = this.updater;
-            for (;;) {
-                final V[] oldVal = updater.get(instance);
-                final int oldLen = oldVal.length;
-                if (oldLen == 0) {
-                    return false;
-                } else {
-                    int index = -1;
-                    if (identity || value == null) {
-                        for (int i = 0; i < oldLen; i++) {
-                            if (oldVal[i] == value) {
-                                index = i;
-                                break;
-                            }
-                        }
-                    } else {
-                        for (int i = 0; i < oldLen; i++) {
-                            if (value.equals(oldVal[i])) {
-                                index = i;
-                                break;
-                            }
-                        }
-                    }
-                    if (index == -1) {
-                        return false;
-                    }
-                    final V[] newVal = creator.create(oldLen - 1);
-                    System.arraycopy(oldVal, 0, newVal, 0, index);
-                    System.arraycopy(oldVal, index + 1, newVal, index, oldLen - index - 1);
-                    if (updater.compareAndSet(instance, oldVal, newVal)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        public interface Creator<V> {
-            V[] create(int len);
-        }
-
-        private static final class ReflectCreator<V> implements Creator<V> {
-            private final Class<V> type;
-
-            public ReflectCreator(final Class<V> type) {
-                this.type = type;
-            }
-
-            @SuppressWarnings({ "unchecked" })
-            public V[] create(final int len) {
-                if (type == Object.class) {
-                    return (V[]) new Object[len];
-                } else {
-                    return (V[]) Array.newInstance(type, len);
-                }
-            }
-        }
     }
 
 }

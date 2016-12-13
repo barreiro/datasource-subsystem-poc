@@ -46,12 +46,9 @@ public class LockFreeCopyOnWriteArrayList<T> implements List<T> {
 
     private volatile T[] data;
 
-    private final Class<? extends T> clazz;
-
     @SuppressWarnings( "unchecked" )
     public LockFreeCopyOnWriteArrayList(Class<? extends T> clazz) {
         this.data = (T[]) Array.newInstance( clazz, 0 );
-        this.clazz = clazz;
     }
 
     // -- //
@@ -84,13 +81,12 @@ public class LockFreeCopyOnWriteArrayList<T> implements List<T> {
 
     @Override
     public boolean add(T element) {
-        boolean updated;
+        T[] oldData, newData;
         do {
-            T[] oldData = data;
-            T[] newData = Arrays.copyOf( oldData, oldData.length + 1 );
+            oldData = data;
+            newData = Arrays.copyOf( oldData, oldData.length + 1 );
             newData[oldData.length] = element;
-            updated = updater.compareAndSet( this, oldData, newData );
-        } while ( !updated );
+        } while ( !updater.compareAndSet( this, oldData, newData ) );
         return true;
     }
 
@@ -115,8 +111,7 @@ public class LockFreeCopyOnWriteArrayList<T> implements List<T> {
             for ( int index = oldData.length - 1; index >= 0; index-- ) {
                 if ( element == oldData[index] ) {
 
-                    T[] newData = (T[]) Array.newInstance( clazz, oldData.length - 1 );
-                    System.arraycopy( oldData, 0, newData, 0, index );
+                    T[] newData = Arrays.copyOf( oldData, oldData.length - 1 );
                     System.arraycopy( oldData, index + 1, newData, index, oldData.length - index - 1 );
 
                     if ( updater.compareAndSet( this, oldData, newData ) ) {
@@ -133,26 +128,20 @@ public class LockFreeCopyOnWriteArrayList<T> implements List<T> {
     }
 
     @Override
-    @SuppressWarnings( "unchecked" )
     public void clear() {
-        while( !updater.compareAndSet( this, data, (T[]) Array.newInstance( clazz, 0 ) ) ); // retry
+        while( !updater.compareAndSet( this, data, Arrays.copyOf( data, 0 ) ) ); // retry
     }
 
     @Override
-    @SuppressWarnings( "unchecked" )
     public T remove(int index) {
         T[] oldData, newData;
         T oldElement;
         do {
             oldData = data;
             oldElement = oldData[index];
-            if ( oldData.length - index - 1 == 0 ) {
-                newData = Arrays.copyOf( oldData, oldData.length - 1 );
-            }
-            else {
-                newData = (T[]) Array.newInstance( clazz, data.length - 1 );
-                System.arraycopy(oldData, 0, newData, 0, index);
-                System.arraycopy(oldData, index + 1, newData, index, data.length - index - 1);
+            newData = Arrays.copyOf( oldData, oldData.length - 1 );
+            if ( oldData.length - index - 1 != 0 ) {
+                System.arraycopy(oldData, index + 1, newData, index, oldData.length - index - 1);
             }
         } while ( !updater.compareAndSet( this, data, newData ) );
         return oldElement;
@@ -165,7 +154,9 @@ public class LockFreeCopyOnWriteArrayList<T> implements List<T> {
 
     @Override
     public Iterator<T> iterator() {
-        return new Iterator<T>() {
+        T[] array = getUnderlyingArray();
+
+        return array.length == 0 ? EMPTY_ITERATOR : new Iterator<T>() {
 
             private int index;
 
@@ -182,6 +173,18 @@ public class LockFreeCopyOnWriteArrayList<T> implements List<T> {
             }
         };
     }
+
+    private static final Iterator EMPTY_ITERATOR = new Iterator() {
+        @Override
+        public boolean hasNext() {
+            return false;
+        }
+
+        @Override
+        public Object next() {
+            throw new IndexOutOfBoundsException();
+        }
+    };
 
     @Override
     public Object[] toArray() {

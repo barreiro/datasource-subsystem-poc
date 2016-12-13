@@ -42,7 +42,6 @@ import java.util.stream.Stream;
 public class StampedCopyOnWriteArrayList<T> implements List<T> {
 
     private final StampedLock lock = new StampedLock();
-    private final Class<? extends T> clazz;
 
     private long optimisticStamp = lock.tryOptimisticRead();
 
@@ -51,7 +50,6 @@ public class StampedCopyOnWriteArrayList<T> implements List<T> {
     @SuppressWarnings( "unchecked" )
     public StampedCopyOnWriteArrayList(Class<? extends T> clazz) {
         this.data = (T[]) Array.newInstance( clazz, 0 );
-        this.clazz = clazz;
     }
 
     // -- //
@@ -148,9 +146,7 @@ public class StampedCopyOnWriteArrayList<T> implements List<T> {
 
                             int numMoved = data.length - index - 1;
                             if ( numMoved > 0 ) {
-
-                                T[] newData = (T[]) Array.newInstance( clazz, data.length - 1 );
-                                System.arraycopy( data, 0, newData, 0, index );
+                                T[] newData = Arrays.copyOf( data, data.length - 1);
                                 System.arraycopy( data, index + 1, newData, index, data.length - index - 1 );
                                 data = newData;
                             }
@@ -177,15 +173,11 @@ public class StampedCopyOnWriteArrayList<T> implements List<T> {
         long stamp = lock.writeLock();
         try {
             T old = data[index];
-            if ( data.length - index - 1 == 0 ) {
-                data = Arrays.copyOf( data, data.length - 1 );
+            T[] array = Arrays.copyOf( data, data.length - 1 );
+            if ( data.length - index - 1 != 0 ) {
+                System.arraycopy( data, index + 1, array, index, data.length - index - 1 );
             }
-            else {
-                T[] array = (T[]) Array.newInstance( clazz, data.length - 1 );
-                System.arraycopy(data, 0, array, 0, index);
-                System.arraycopy(data, index + 1, array, index, data.length - index - 1);
-                data = array;
-            }
+            data = array;
             return old;
         }
         finally {
@@ -199,7 +191,7 @@ public class StampedCopyOnWriteArrayList<T> implements List<T> {
     public void clear() {
         long stamp = lock.writeLock();
         try {
-            data = (T[]) Array.newInstance( clazz, 0 );
+            data = Arrays.copyOf( data, 0 );
         } finally {
             lock.unlockWrite( stamp );
             optimisticStamp = lock.tryOptimisticRead();
