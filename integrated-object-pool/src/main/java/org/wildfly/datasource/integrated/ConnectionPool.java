@@ -24,6 +24,7 @@ package org.wildfly.datasource.integrated;
 
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
+import org.wildfly.datasource.integrated.util.PoolSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
 import org.wildfly.datasource.integrated.util.UncheckedArrayList;
 
@@ -33,8 +34,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.locks.AbstractQueuedLongSynchronizer;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -61,7 +60,7 @@ public class ConnectionPool implements AutoCloseable {
 //    private final SynchronizedCopyOnWriteArrayList<ConnectionHandler> allConnections;
     private final StampedCopyOnWriteArrayList<ConnectionHandler> allConnections;
 
-    private final PoolSynchronizer synchronizer = new PoolSynchronizer();
+    private final PoolSynchronizer synchronizer = PoolSynchronizer.nonFair();
     private final ConnectionFactory connectionFactory;
     private final ScheduledExecutorService housekeepingExecutor;
     private final InterruptProtection interruptProtection;
@@ -260,7 +259,7 @@ public class ConnectionPool implements AutoCloseable {
     }
 
     public long awaitingCount() {
-        return synchronizer.sync.getQueueLength();
+        return synchronizer.getQueueLength();
     }
 
     // --- validation + leak detection //
@@ -381,57 +380,6 @@ public class ConnectionPool implements AutoCloseable {
                 // Ignore
             }
             dataSource.metricsRegistry().afterConnectionTimeout();
-        }
-
-    }
-
-    // --- Synchronizer //
-
-    private static class PoolSynchronizer {
-
-        private final LongAdder counter = new LongAdder();
-
-        private final AbstractQueuedLongSynchronizer sync = new AbstractQueuedLongSynchronizer() {
-
-            @Override
-            protected boolean tryAcquire(long value) {
-                // Advance when counter is greater than value
-                return counter.longValue() > value;
-
-//                if ( counter.longValue() > value) {
-//                    System.out.printf( "     >>>   %s got UNLOCKED!!  (%d > %d)%n", Thread.currentThread().getName(), counter.longValue(), value );
-//                    System.out.flush();
-//                }
-//                else {
-//                    System.out.printf( "  ------  %s got LOCKED on __ %d __ (current %d) %n", Thread.currentThread().getName(), value, counter.longValue() );
-//                    System.out.flush();
-//                }
-//                return counter.longValue() > value;
-            }
-
-            @Override
-            protected boolean tryRelease(long releases) {
-                counter.add( releases );
-//                System.out.printf( "  >>>     %s releases __ %d __%n", Thread.currentThread().getName(), counter.longValue() );
-                return true;
-            }
-
-        };
-
-        // --- //
-
-        public int getQueueLength() {
-            return sync.getQueueLength();
-        }
-
-        public boolean tryAcquire(long nanos) throws InterruptedException {
-            return sync.tryAcquireNanos( counter.longValue(), nanos );
-        }
-
-        public void releaseConditional() {
-            if (sync.hasQueuedThreads()) {
-                sync.release( 1 );
-            }
         }
 
     }
