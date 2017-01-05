@@ -22,6 +22,10 @@
 
 package org.wildfly.datasource.api.configuration;
 
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Properties;
 import java.util.function.Consumer;
 
 /**
@@ -29,17 +33,21 @@ import java.util.function.Consumer;
  */
 public class ConnectionFactoryConfigurationBuilder {
 
+    private static final String USERNAME_PROPERTY_NAME = "username";
+    private static final String PASSWORD_PROPERTY_NAME = "password";
+
     private volatile boolean lock;
 
     private boolean autoCommit = false;
-    private String username = "";
-    private String password = "";
     private String jdbcUrl = "";
     private String initSql = "";
     private String driverClassName = "";
     private ClassLoaderProvider classLoaderProvider;
     private ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation;
     private ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode;
+    private Principal principal;
+    private Collection<Object> credentials = new ArrayList<>();
+    private Properties jdbcProperties = new Properties();
 
     public ConnectionFactoryConfigurationBuilder() {
         this.lock = false;
@@ -55,14 +63,6 @@ public class ConnectionFactoryConfigurationBuilder {
 
     public ConnectionFactoryConfigurationBuilder setAutoCommit(boolean autoCommit) {
         return applySetting( c -> c.autoCommit = autoCommit );
-    }
-
-    public ConnectionFactoryConfigurationBuilder setUsername(String username) {
-        return applySetting( c -> c.username = username );
-    }
-
-    public ConnectionFactoryConfigurationBuilder setPassword(String password) {
-        return applySetting( c -> c.password = password );
     }
 
     public ConnectionFactoryConfigurationBuilder setJdbcUrl(String jdbcUrl) {
@@ -98,7 +98,30 @@ public class ConnectionFactoryConfigurationBuilder {
         return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
     }
 
+    public ConnectionFactoryConfigurationBuilder setPrincipal(Principal principal) {
+        return applySetting( c -> c.principal = principal );
+    }
+
+    public ConnectionFactoryConfigurationBuilder setCredential(Object credential) {
+        return applySetting( c -> c.credentials.add( credential ) );
+    }
+
+    public ConnectionFactoryConfigurationBuilder setJdbcProperty(String key, String value) {
+        validateJdbcProperty( key );
+        return applySetting( c -> c.jdbcProperties.put( key, value) );
+    }
+
+    private void validateJdbcProperty(String key) {
+        if ( USERNAME_PROPERTY_NAME.equalsIgnoreCase( key ) ) {
+            throw new IllegalArgumentException( "Invalid property '" + key + "': use principal instead." );
+        }
+        if ( PASSWORD_PROPERTY_NAME.equalsIgnoreCase( key ) ) {
+            throw new IllegalArgumentException( "Invalid property '" + key + "': use credential instead." );
+        }
+    }
+
     public ConnectionFactoryConfiguration build() {
+        //validate();
         this.lock = true;
 
         return new ConnectionFactoryConfiguration() {
@@ -106,16 +129,6 @@ public class ConnectionFactoryConfigurationBuilder {
             @Override
             public boolean autoCommit() {
                 return autoCommit;
-            }
-
-            @Override
-            public String username() {
-                return username;
-            }
-
-            @Override
-            public String password() {
-                return password;
             }
 
             @Override
@@ -146,6 +159,21 @@ public class ConnectionFactoryConfigurationBuilder {
             @Override
             public InterruptHandlingMode interruptHandlingMode() {
                 return interruptHandlingMode != null ? interruptHandlingMode : InterruptHandlingMode.OFF;
+            }
+
+            @Override
+            public Principal principal() {
+                return principal;
+            }
+
+            @Override
+            public Collection<Object> credentials() {
+                return credentials;
+            }
+
+            @Override
+            public Properties jdbcProperties() {
+                return jdbcProperties;
             }
         };
 

@@ -20,45 +20,50 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api.security;
 
+import java.io.Serializable;
 import java.security.Principal;
-import java.util.Collection;
-import java.util.Properties;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface ConnectionFactoryConfiguration {
+public class NamePrincipal implements Principal, Serializable {
 
-    boolean autoCommit();
+    private static final long serialVersionUID = 1;
 
-    String jdbcUrl();
+    private String name;
 
-    String initSql();
+    public NamePrincipal(String name) {
+        this.name = name;
+    }
 
-    String driverClassName();
-
-    ClassLoaderProvider classLoaderProvider();
-
-    TransactionIsolation transactionIsolation();
-
-    InterruptHandlingMode interruptHandlingMode();
-
-    Principal principal();
-
-    Collection<Object> credentials();
-
-    Properties jdbcProperties();
+    public String getName() {
+        return name;
+    }
 
     // --- //
 
-    enum TransactionIsolation {
-        NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+    @Override
+    public boolean equals(Object o) {
+        if ( this == o ) {
+            return true;
+        }
+        if ( o == null || !( o instanceof Principal ) ) {
+            return false;
+        }
+        Principal p = (Principal) o;
+        return name == null ? p.getName() == null : name.equals( p.getName() );
     }
 
-    enum InterruptHandlingMode {
-        AUTO, ON, OFF
+    @Override
+    public int hashCode() {
+        return name == null ? 7 : name.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 
 }

@@ -20,45 +20,50 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api.security;
 
-import java.security.Principal;
-import java.util.Collection;
-import java.util.Properties;
+import java.io.Serializable;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface ConnectionFactoryConfiguration {
+public class SimplePassword implements Serializable {
 
-    boolean autoCommit();
+    private static final long serialVersionUID = 1;
 
-    String jdbcUrl();
+    private String word;
 
-    String initSql();
+    public SimplePassword(String password) {
+        this.word = password;
+    }
 
-    String driverClassName();
-
-    ClassLoaderProvider classLoaderProvider();
-
-    TransactionIsolation transactionIsolation();
-
-    InterruptHandlingMode interruptHandlingMode();
-
-    Principal principal();
-
-    Collection<Object> credentials();
-
-    Properties jdbcProperties();
+    public String getWord() {
+        return word;
+    }
 
     // --- //
 
-    enum TransactionIsolation {
-        NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+    @Override
+    public boolean equals(Object o) {
+        if ( this == o ) {
+            return true;
+        }
+        if ( o == null || !(o instanceof SimplePassword) ) {
+            return false;
+        }
+
+        SimplePassword that = (SimplePassword) o;
+        return word == null ? that.word == null : word.equals( that.word );
     }
 
-    enum InterruptHandlingMode {
-        AUTO, ON, OFF
+    @Override
+    public int hashCode() {
+        return word == null ? 7 : word.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return word;
     }
 
 }

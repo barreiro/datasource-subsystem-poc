@@ -23,36 +23,74 @@
 package org.wildfly.datasource.integrated;
 
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
+import org.wildfly.datasource.api.security.NamePrincipal;
+import org.wildfly.datasource.api.security.SimplePassword;
 
+import java.security.Principal;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
 public class ConnectionFactory {
 
-    private static String CONNECTION_CLOSE_METHOD_NAME = "close";
+    private static final String USERNAME_PROPERTY_NAME = "username";
+    private static final String PASSWORD_PROPERTY_NAME = "password";
 
     private ConnectionFactoryConfiguration configuration;
-
     private Driver driver;
+    private Properties jdbcProperties;
 
     @SuppressWarnings("unchecked")
     public ConnectionFactory(ConnectionFactoryConfiguration configuration) {
         try {
             this.configuration = configuration;
+            this.jdbcProperties = configuration.jdbcProperties();
             ClassLoader driverLoader = configuration.classLoaderProvider().getClassLoader( configuration.driverClassName() );
             Class<Driver> driverClass = (Class<Driver>) driverLoader.loadClass( configuration.driverClassName() );
             driver = driverClass.newInstance();
+
+            setupSecurity( configuration );
+
         } catch ( IllegalAccessException | InstantiationException | ClassNotFoundException e ) {
             throw new RuntimeException( "Unable to load driver class" );
         }
     }
 
+    private void setupSecurity(ConnectionFactoryConfiguration configuration) {
+        Principal principal = configuration.principal();
+        if ( principal == null ) {
+            // skip!
+        }
+        else if ( principal instanceof NamePrincipal ) {
+            jdbcProperties.put( USERNAME_PROPERTY_NAME, principal.getName() );
+        }
+
+        // Add other principal types here
+
+        else {
+            throw new IllegalArgumentException( "Unknown Principal type: " + principal.getClass().getName() );
+        }
+
+        for ( Object credential : configuration.credentials() ) {
+            if ( credential instanceof SimplePassword ) {
+                jdbcProperties.put( PASSWORD_PROPERTY_NAME, ( (SimplePassword) credential ).getWord() );
+            }
+
+            // Add other credential types here
+
+            else {
+                throw new IllegalArgumentException( "Unknown Credential type: " + credential.getClass().getName() );
+            }
+        }
+
+    }
+
     public ConnectionHandler createHandler() throws SQLException {
-        Connection connection = driver.connect( configuration.jdbcUrl(), null );
+        Connection connection = driver.connect( configuration.jdbcUrl(), jdbcProperties );
         connection.setAutoCommit( configuration.autoCommit() );
         connection.createStatement().execute( configuration.initSql() );
         return new ConnectionHandler( connection );
