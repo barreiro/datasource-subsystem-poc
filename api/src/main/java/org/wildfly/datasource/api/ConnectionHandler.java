@@ -43,8 +43,6 @@ public class ConnectionHandler {
     private volatile State state;
     private final static AtomicReferenceFieldUpdater<ConnectionHandler, State> stateUpdater = AtomicReferenceFieldUpdater.newUpdater( ConnectionHandler.class, State.class, "state" );
 
-    private final LongAdder transactionAssociationCount = new LongAdder();
-
     // for leak detection (only valid for CHECKED_OUT connections)
     private Thread holdingThread;
 
@@ -110,15 +108,6 @@ public class ConnectionHandler {
 
     public void setHoldingThread(Thread holdingThread) {
         this.holdingThread = holdingThread;
-    }
-
-    public void incrementTransactionAssociation() {
-        transactionAssociationCount.increment();
-    }
-
-    public long decrementTransactionAssociation() {
-        transactionAssociationCount.decrement();
-        return transactionAssociationCount.sum();
     }
 
 }

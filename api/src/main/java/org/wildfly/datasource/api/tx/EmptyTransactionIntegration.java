@@ -36,7 +36,7 @@ public class EmptyTransactionIntegration implements TransactionIntegration {
     public void associate(ConnectionHandler handler) {
     }
 
-    public boolean disasssociate(ConnectionHandler handler) {
+    public boolean disassociate(ConnectionHandler handler) {
         return true;
     }
 

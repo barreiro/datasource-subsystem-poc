@@ -26,10 +26,12 @@ package org.wildfly.datasource.api.tx;
 import org.wildfly.datasource.api.ConnectionHandler;
 
 import javax.transaction.Status;
+import javax.transaction.Synchronization;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.TransactionSynchronizationRegistry;
 import java.sql.SQLException;
+import java.util.UUID;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -43,15 +45,22 @@ public class JTATransactionIntegration implements TransactionIntegration {
 
     private final TransactionSynchronizationRegistry transactionSynchronizationRegistry;
 
+    private final String key;
+
     public JTATransactionIntegration(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
         this.transactionManager = transactionManager;
         this.transactionSynchronizationRegistry = transactionSynchronizationRegistry;
+        this.key = UUID.randomUUID().toString();
     }
 
     public ConnectionHandler getConnectionHandler() throws SQLException {
         try {
             Transaction transaction = transactionManager.getTransaction();
-            return transaction == null ? null : (ConnectionHandler) transactionSynchronizationRegistry.getResource( transaction );
+            if ( transaction != null &&
+                    ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK ) ) {
+                return (ConnectionHandler) transactionSynchronizationRegistry.getResource( key );
+            }
+            return null;
         } catch ( Exception e ) {
             throw new SQLException( "Exception in getting existing transaction association", e );
         }
@@ -60,11 +69,25 @@ public class JTATransactionIntegration implements TransactionIntegration {
     public void associate(ConnectionHandler handler) throws SQLException {
         try {
             Transaction transaction = transactionManager.getTransaction();
-            if ( transaction.getStatus() == Status.STATUS_ACTIVE ) {
-                handler.incrementTransactionAssociation();
-                transactionSynchronizationRegistry.putResource( transaction, handler );
+            if ( transaction == null ) {
+                return;
             }
-            else {
+
+            if ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK ) {
+                transactionSynchronizationRegistry.putResource( key, handler );
+                transactionSynchronizationRegistry.registerInterposedSynchronization( new Synchronization() {
+                    @Override
+                    public void beforeCompletion() {}
+
+                    @Override
+                    public void afterCompletion(int status) {
+                        try { // Return connection to the pool
+                            handler.getConnection().close();
+                        } catch ( SQLException ignore ) {}
+                    }
+                } );
+                transaction.enlistResource( new LocalXAResource( handler ) );
+            } else {
                 throw new SQLException( "Transaction not in ACTIVE state" );
             }
         } catch ( Exception e ) {
@@ -72,16 +95,12 @@ public class JTATransactionIntegration implements TransactionIntegration {
         }
     }
 
-    public boolean disasssociate(ConnectionHandler handler) throws SQLException {
+    public boolean disassociate(ConnectionHandler handler) throws SQLException {
         try {
-            long associationCount = handler.decrementTransactionAssociation();
-            if ( associationCount <= 0 ) {
-                transactionSynchronizationRegistry.putResource( transactionManager.getTransaction(), null );
-                return true;
-            }
-            return false;
+            transactionSynchronizationRegistry.putResource( key, null );
+            return true;
         } catch ( Exception e ) {
-            throw new SQLException( "Exception in association of connection to existing transaction", e );
+            throw new SQLException( "Exception in disassociation of connection to existing transaction", e );
         }
     }
 

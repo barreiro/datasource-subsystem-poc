@@ -35,6 +35,6 @@ public interface TransactionIntegration {
 
     void associate(ConnectionHandler handler) throws SQLException;
 
-    boolean disasssociate(ConnectionHandler handler) throws SQLException;
+    boolean disassociate(ConnectionHandler handler) throws SQLException;
 
 }
