@@ -61,12 +61,10 @@ public class UncheckedArrayList<T> implements List<T> {
 
     @Override
     public boolean add(T element) {
-        try {
-            data[size] = element;
-        } catch ( ArrayIndexOutOfBoundsException e ) {
+        if (size >= data.length ) {
             data = Arrays.copyOf( data, data.length << 1 );
-            data[size] = element;
         }
+        data[size] = element;
         size++;
         return true;
     }

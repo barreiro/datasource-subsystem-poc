@@ -20,11 +20,12 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.integrated;
+package org.wildfly.datasource.api;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -41,6 +42,8 @@ public class ConnectionHandler {
     // @Contended
     private volatile State state;
     private final static AtomicReferenceFieldUpdater<ConnectionHandler, State> stateUpdater = AtomicReferenceFieldUpdater.newUpdater( ConnectionHandler.class, State.class, "state" );
+
+    private final LongAdder transactionAssociationCount = new LongAdder();
 
     // for leak detection (only valid for CHECKED_OUT connections)
     private Thread holdingThread;
@@ -107,6 +110,15 @@ public class ConnectionHandler {
 
     public void setHoldingThread(Thread holdingThread) {
         this.holdingThread = holdingThread;
+    }
+
+    public void incrementTransactionAssociation() {
+        transactionAssociationCount.increment();
+    }
+
+    public long decrementTransactionAssociation() {
+        transactionAssociationCount.decrement();
+        return transactionAssociationCount.sum();
     }
 
 }

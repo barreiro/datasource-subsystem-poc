@@ -30,9 +30,11 @@ import org.wildfly.datasource.api.WildFlyDataSourceMetrics;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
+import org.wildfly.datasource.api.security.SimplePassword;
 
 import javax.sql.XAConnection;
 import java.io.PrintWriter;
+import java.security.Principal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -70,10 +72,18 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
         }
 
         hikariConfig.setJdbcUrl( factoryConfiguration.jdbcUrl() );
-        hikariConfig.setUsername( factoryConfiguration.username() );
-        hikariConfig.setPassword( factoryConfiguration.password() );
         hikariConfig.setAutoCommit( factoryConfiguration.autoCommit() );
         hikariConfig.setConnectionInitSql( factoryConfiguration.initSql() );
+
+        Principal principal = factoryConfiguration.principal();
+        if ( principal != null ) {
+            hikariConfig.setUsername( factoryConfiguration.principal().getName() );
+        }
+        for ( Object credential : factoryConfiguration.credentials() ) {
+            if ( credential instanceof SimplePassword ) {
+                hikariConfig.setPassword( ( (SimplePassword) credential ).getWord() );
+            }
+        }
 
         hikariConfig.setMaximumPoolSize( poolConfiguration.maxSize() );
         hikariConfig.setConnectionTimeout( poolConfiguration.acquisitionTimeout() );

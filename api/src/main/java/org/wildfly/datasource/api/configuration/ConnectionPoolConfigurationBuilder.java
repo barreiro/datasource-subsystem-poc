@@ -23,6 +23,8 @@
 package org.wildfly.datasource.api.configuration;
 
 import org.wildfly.datasource.api.ConnectionValidator;
+import org.wildfly.datasource.api.tx.EmptyTransactionIntegration;
+import org.wildfly.datasource.api.tx.TransactionIntegration;
 
 import java.util.function.Consumer;
 
@@ -36,10 +38,10 @@ public class ConnectionPoolConfigurationBuilder {
     private ConnectionPoolConfiguration.PoolImplementation poolImplementation = ConnectionPoolConfiguration.PoolImplementation.DEFAULT;
     private ConnectionFactoryConfiguration connectionFactoryConfiguration;
     private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.OFF;
-    private String connectionInitSql = "";
+    private TransactionIntegration transactionIntegration = new EmptyTransactionIntegration();
     private volatile int minSize = 0;
     private volatile int maxSize = 0;
-    private ConnectionValidator connectionValidator;
+    private ConnectionValidator connectionValidator = ConnectionValidator.emptyValidator();
     private long connectionValidationTimeout = 60;
     private long connectionReapTimeout = 600;
     private volatile long acquisitionTimeout = 60_000;
@@ -68,12 +70,12 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfigurationBuilder.build() );
     }
 
-    public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
-        return applySetting( c -> c.preFillMode = preFillMode );
+    public ConnectionPoolConfigurationBuilder setTransactionIntegration(TransactionIntegration transactionIntegration) {
+        return applySetting( c -> c.transactionIntegration = transactionIntegration );
     }
 
-    public ConnectionPoolConfigurationBuilder setConnectionInitSql(String connectionInitSql) {
-        return applySetting( c -> c.connectionInitSql = connectionInitSql );
+    public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
+        return applySetting( c -> c.preFillMode = preFillMode );
     }
 
     public ConnectionPoolConfigurationBuilder setMinSize(int minSize) {
@@ -126,13 +128,13 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public PreFillMode preFillMode() {
-                return preFillMode;
+            public TransactionIntegration transactionIntegration() {
+                return transactionIntegration;
             }
 
             @Override
-            public String connectionInitSql() {
-                return connectionInitSql;
+            public PreFillMode preFillMode() {
+                return preFillMode;
             }
 
             @Override
@@ -167,9 +169,6 @@ public class ConnectionPoolConfigurationBuilder {
 
             @Override
             public ConnectionValidator connectionValidator() {
-                if ( connectionValidator == null ) {
-                    return ConnectionValidator.emptyValidator();
-                }
                 return connectionValidator;
             }
 

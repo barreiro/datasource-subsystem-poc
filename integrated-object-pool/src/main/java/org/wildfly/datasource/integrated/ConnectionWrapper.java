@@ -22,6 +22,8 @@
 
 package org.wildfly.datasource.integrated;
 
+import org.wildfly.datasource.api.ConnectionHandler;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.sql.Array;

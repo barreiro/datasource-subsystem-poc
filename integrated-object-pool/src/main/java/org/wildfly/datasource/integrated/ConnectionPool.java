@@ -22,8 +22,10 @@
 
 package org.wildfly.datasource.integrated;
 
+import org.wildfly.datasource.api.ConnectionHandler;
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
+import org.wildfly.datasource.api.tx.TransactionIntegration;
 import org.wildfly.datasource.integrated.util.PoolSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
 import org.wildfly.datasource.integrated.util.UncheckedArrayList;
@@ -37,11 +39,11 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_IN;
-import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_OUT;
-import static org.wildfly.datasource.integrated.ConnectionHandler.State.DESTROYED;
-import static org.wildfly.datasource.integrated.ConnectionHandler.State.FLUSH;
-import static org.wildfly.datasource.integrated.ConnectionHandler.State.VALIDATION;
+import static org.wildfly.datasource.api.ConnectionHandler.State.CHECKED_IN;
+import static org.wildfly.datasource.api.ConnectionHandler.State.CHECKED_OUT;
+import static org.wildfly.datasource.api.ConnectionHandler.State.FLUSH;
+import static org.wildfly.datasource.api.ConnectionHandler.State.DESTROYED;
+import static org.wildfly.datasource.api.ConnectionHandler.State.VALIDATION;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -64,6 +66,7 @@ public class ConnectionPool implements AutoCloseable {
     private final ConnectionFactory connectionFactory;
     private final ScheduledExecutorService housekeepingExecutor;
     private final InterruptProtection interruptProtection;
+    private final TransactionIntegration transactionIntegration;
 
     private final boolean validatingEnable, reapEnable;
     private volatile long maxUsed = 0;
@@ -83,7 +86,8 @@ public class ConnectionPool implements AutoCloseable {
         connectionFactory = new ConnectionFactory( configuration.connectionFactoryConfiguration() );
         housekeepingExecutor = Executors.newSingleThreadScheduledExecutor( Executors.defaultThreadFactory() );
 
-        interruptProtection = InterruptProtection.from(configuration.connectionFactoryConfiguration().interruptHandlingMode());
+        interruptProtection = InterruptProtection.from( configuration.connectionFactoryConfiguration().interruptHandlingMode() );
+        transactionIntegration = configuration.transactionIntegration();
 
         validatingEnable = configuration.connectionValidationTimeout() > 0;
         reapEnable = configuration.connectionReapTimeout() > 0;
@@ -161,11 +165,14 @@ public class ConnectionPool implements AutoCloseable {
         WildFlyDataSourceListener.fireBeforeConnectionAcquire( dataSource.listenerList() );
         long metricsStamp = dataSource.metricsRegistry().beforeConnectionAcquire();
 
-        ConnectionHandler checkedOutHandler = handlerFromLocalCache();
-
+        ConnectionHandler checkedOutHandler = transactionIntegration.getConnectionHandler();
+        if ( checkedOutHandler == null ) {
+            checkedOutHandler = handlerFromLocalCache();
+        }
         if ( checkedOutHandler == null ) {
             checkedOutHandler = handlerFromSharedCache();
         }
+        transactionIntegration.associate( checkedOutHandler );
 
         dataSource.metricsRegistry().afterConnectionAcquire( metricsStamp );
         WildFlyDataSourceListener.fireOnConnectionAcquired( dataSource.listenerList(), checkedOutHandler.getConnection() );
@@ -174,7 +181,7 @@ public class ConnectionPool implements AutoCloseable {
             checkedOutHandler.setLastAccess( System.nanoTime() );
             checkedOutHandler.setHoldingThread( Thread.currentThread() );
         }
-        return new ConnectionWrapper(this, checkedOutHandler, interruptProtection);
+        return new ConnectionWrapper( this, checkedOutHandler, interruptProtection );
     }
 
     private ConnectionHandler handlerFromLocalCache() {
@@ -219,14 +226,15 @@ public class ConnectionPool implements AutoCloseable {
 
     // --- //
 
-    public void returnConnection(ConnectionHandler handler) {
+    public void returnConnection(ConnectionHandler handler) throws SQLException {
         if ( reapEnable ) {
             handler.setLastAccess( System.nanoTime() );
         }
-
-        localCache.get().add( handler );
-        handler.setState( CHECKED_IN );
-        synchronizer.releaseConditional();
+        if ( transactionIntegration.disasssociate( handler ) ) {
+            localCache.get().add( handler );
+            handler.setState( CHECKED_IN );
+            synchronizer.releaseConditional();
+        }
     }
 
     // --- Exposed statistics //

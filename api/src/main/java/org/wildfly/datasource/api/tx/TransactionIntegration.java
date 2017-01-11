@@ -20,18 +20,21 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api.tx;
 
-import javax.transaction.TransactionManager;
-import javax.transaction.TransactionSynchronizationRegistry;
+import org.wildfly.datasource.api.ConnectionHandler;
+
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
 public interface TransactionIntegration {
 
-    TransactionManager transactionManager();
+    ConnectionHandler getConnectionHandler() throws SQLException;
 
-    TransactionSynchronizationRegistry transactionSynchronizationRegistry();
+    void associate(ConnectionHandler handler) throws SQLException;
+
+    boolean disasssociate(ConnectionHandler handler) throws SQLException;
 
 }

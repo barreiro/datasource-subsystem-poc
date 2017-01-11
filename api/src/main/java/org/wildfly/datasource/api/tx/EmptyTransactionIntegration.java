@@ -20,51 +20,24 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.configuration;
+package org.wildfly.datasource.api.tx;
 
-import org.wildfly.datasource.api.ConnectionValidator;
-import org.wildfly.datasource.api.tx.TransactionIntegration;
+import org.wildfly.datasource.api.ConnectionHandler;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface ConnectionPoolConfiguration {
+public class EmptyTransactionIntegration implements TransactionIntegration {
 
-    PoolImplementation poolImplementation();
-
-    PreFillMode preFillMode();
-
-    ConnectionFactoryConfiguration connectionFactoryConfiguration();
-
-    ConnectionValidator connectionValidator();
-
-    TransactionIntegration transactionIntegration();
-
-    long connectionValidationTimeout();
-
-    long connectionReapTimeout();
-
-    // --- Mutable attributes
-
-    int minSize();
-    void setMinSize(int size);
-
-    int maxSize();
-    void setMaxSize(int size);
-
-    long acquisitionTimeout();
-    void setAcquisitionTimeout(long timeout);
-
-    // TODO: Allow registration of listeners for changes ?!?!
-
-    // --- //
-
-    enum PoolImplementation {
-        DEFAULT, BLOCKING_QUEUE, LOCK_FREE, SEMAPHORE, FAST_BAG
+    public ConnectionHandler getConnectionHandler() {
+        return null;
     }
 
-    enum PreFillMode {
-        OFF, MIN, MAX
+    public void associate(ConnectionHandler handler) {
+    }
+
+    public boolean disasssociate(ConnectionHandler handler) {
+        return true;
     }
 
 }
