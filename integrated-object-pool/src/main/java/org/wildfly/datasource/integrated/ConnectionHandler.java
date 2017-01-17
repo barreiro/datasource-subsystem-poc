@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api;
+package org.wildfly.datasource.integrated;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -29,13 +29,13 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-
-// TODO: Sort the transaction SPI so that it can be moved back to integrated module
-
 public class ConnectionHandler {
 
     private final static AtomicReferenceFieldUpdater<ConnectionHandler, State> stateUpdater = AtomicReferenceFieldUpdater.newUpdater( ConnectionHandler.class, State.class, "state" );
+
     private final Connection connection;
+
+    private ConnectionPool connectionPool;
 
     // Can use annotation to get a little better performance
     // @Contended
@@ -47,25 +47,29 @@ public class ConnectionHandler {
     // for expiration (CHECKED_IN connections) and leak detection (CHECKED_OUT connections)
     private long lastAccess;
 
-    private boolean inTransaction;
-    private boolean autocommitCache;
-
     public ConnectionHandler(Connection connection) {
         this.connection = connection;
         state = State.NEW;
         lastAccess = System.currentTimeMillis();
-        inTransaction = false;
+    }
+
+    public void setConnectionPool(ConnectionPool connectionPool) {
+        this.connectionPool = connectionPool;
     }
 
     public Connection getConnection() {
         return connection;
     }
 
-    public void closeUnderlyingConnection() throws SQLException {
+    public void closeConnection() throws SQLException {
         if ( state != State.FLUSH ) {
             throw new SQLException( "Closing connection in incorrect state" );
         }
         connection.close();
+    }
+
+    public void returnConnection() throws SQLException {
+        connectionPool.returnConnection( this );
     }
 
     public boolean setState(State expected, State newState) {
@@ -96,10 +100,6 @@ public class ConnectionHandler {
         return stateUpdater.get( this ) == State.CHECKED_OUT;
     }
 
-    public boolean isInTransaction() {
-        return inTransaction;
-    }
-
     public long getLastAccess() {
         return lastAccess;
     }
@@ -114,17 +114,6 @@ public class ConnectionHandler {
 
     public void setHoldingThread(Thread holdingThread) {
         this.holdingThread = holdingThread;
-    }
-
-    public void transactionLock() throws SQLException {
-        autocommitCache = connection.getAutoCommit();
-        connection.setAutoCommit( false );
-        inTransaction = true;
-    }
-
-    public void transactionUnlock() throws SQLException {
-        inTransaction = false;
-        connection.setAutoCommit( autocommitCache );
     }
 
     // --- //

@@ -22,10 +22,9 @@
 
 package org.wildfly.datasource.integrated;
 
-import org.wildfly.datasource.api.ConnectionHandler;
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
-import org.wildfly.datasource.api.tx.TransactionIntegration;
+import org.wildfly.datasource.api.tx.TransactionSupport;
 import org.wildfly.datasource.integrated.util.PoolSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
 import org.wildfly.datasource.integrated.util.UncheckedArrayList;
@@ -39,11 +38,11 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.wildfly.datasource.api.ConnectionHandler.State.CHECKED_IN;
-import static org.wildfly.datasource.api.ConnectionHandler.State.CHECKED_OUT;
-import static org.wildfly.datasource.api.ConnectionHandler.State.FLUSH;
-import static org.wildfly.datasource.api.ConnectionHandler.State.DESTROYED;
-import static org.wildfly.datasource.api.ConnectionHandler.State.VALIDATION;
+import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_IN;
+import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_OUT;
+import static org.wildfly.datasource.integrated.ConnectionHandler.State.FLUSH;
+import static org.wildfly.datasource.integrated.ConnectionHandler.State.DESTROYED;
+import static org.wildfly.datasource.integrated.ConnectionHandler.State.VALIDATION;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -66,7 +65,7 @@ public class ConnectionPool implements AutoCloseable {
     private final ConnectionFactory connectionFactory;
     private final ScheduledExecutorService housekeepingExecutor;
     private final InterruptProtection interruptProtection;
-    private final TransactionIntegration transactionIntegration;
+    private final TransactionSupport transactionSupport;
 
     private final boolean validatingEnable, reapEnable;
     private volatile long maxUsed = 0;
@@ -87,7 +86,7 @@ public class ConnectionPool implements AutoCloseable {
         housekeepingExecutor = Executors.newSingleThreadScheduledExecutor( Executors.defaultThreadFactory() );
 
         interruptProtection = InterruptProtection.from( configuration.connectionFactoryConfiguration().interruptHandlingMode() );
-        transactionIntegration = configuration.transactionIntegration();
+        transactionSupport = configuration.transactionIntegration();
 
         validatingEnable = configuration.connectionValidationTimeout() > 0;
         reapEnable = configuration.connectionReapTimeout() > 0;
@@ -140,6 +139,7 @@ public class ConnectionPool implements AutoCloseable {
 
             try {
                 ConnectionHandler handler = connectionFactory.createHandler();
+                handler.setConnectionPool( this );
 
                 WildFlyDataSourceListener.fireOnConnectionCreated( dataSource.listenerList(), handler.getConnection() );
 
@@ -165,14 +165,13 @@ public class ConnectionPool implements AutoCloseable {
         WildFlyDataSourceListener.fireBeforeConnectionAcquire( dataSource.listenerList() );
         long metricsStamp = dataSource.metricsRegistry().beforeConnectionAcquire();
 
-        ConnectionHandler checkedOutHandler = transactionIntegration.getConnectionHandler();
+        ConnectionHandler checkedOutHandler = handlerFromTransaction();
         if ( checkedOutHandler == null ) {
             checkedOutHandler = handlerFromLocalCache();
         }
         if ( checkedOutHandler == null ) {
             checkedOutHandler = handlerFromSharedCache();
         }
-        transactionIntegration.associate( checkedOutHandler );
 
         dataSource.metricsRegistry().afterConnectionAcquire( metricsStamp );
         WildFlyDataSourceListener.fireOnConnectionAcquired( dataSource.listenerList(), checkedOutHandler.getConnection() );
@@ -181,10 +180,21 @@ public class ConnectionPool implements AutoCloseable {
             checkedOutHandler.setLastAccess( System.nanoTime() );
             checkedOutHandler.setHoldingThread( Thread.currentThread() );
         }
-        return new ConnectionWrapper( this, checkedOutHandler, interruptProtection );
+
+        ConnectionWrapper connectionWrapper = new ConnectionWrapper( checkedOutHandler, interruptProtection );
+        transactionSupport.associate( connectionWrapper );
+        return connectionWrapper;
     }
 
-    private ConnectionHandler handlerFromLocalCache() {
+    private ConnectionHandler handlerFromTransaction() throws SQLException {
+        Connection connection = transactionSupport.getConnection();
+        if ( connection != null ) {
+            return ( (ConnectionWrapper) connection ).getHandler();
+        }
+        return null;
+    }
+
+    private ConnectionHandler handlerFromLocalCache() throws SQLException {
         UncheckedArrayList<ConnectionHandler> cachedConnections = localCache.get();
         while ( !cachedConnections.isEmpty() ) {
             ConnectionHandler handler = cachedConnections.removeLast();
@@ -230,7 +240,7 @@ public class ConnectionPool implements AutoCloseable {
         if ( reapEnable ) {
             handler.setLastAccess( System.nanoTime() );
         }
-        if ( transactionIntegration.disassociate( handler ) ) {
+        if ( transactionSupport.disassociate( handler.getConnection() ) ) {
             localCache.get().add( handler );
             handler.setState( CHECKED_IN );
             synchronizer.releaseConditional();
@@ -326,7 +336,7 @@ public class ConnectionPool implements AutoCloseable {
 
         private void closeInvalidConnection( ConnectionHandler connectionWrapper ) {
             try {
-                connectionWrapper.closeUnderlyingConnection();
+                connectionWrapper.closeConnection();
             } catch ( SQLException e ) {
                 // Ignore
             }
@@ -383,7 +393,7 @@ public class ConnectionPool implements AutoCloseable {
 
         private void closeIdleConnection( ConnectionHandler handler ) {
             try {
-                handler.closeUnderlyingConnection();
+                handler.closeConnection();
             } catch ( SQLException e ) {
                 // Ignore
             }

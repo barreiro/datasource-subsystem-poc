@@ -23,8 +23,7 @@
 package org.wildfly.datasource.api.configuration;
 
 import org.wildfly.datasource.api.ConnectionValidator;
-import org.wildfly.datasource.api.tx.EmptyTransactionIntegration;
-import org.wildfly.datasource.api.tx.TransactionIntegration;
+import org.wildfly.datasource.api.tx.TransactionSupport;
 
 import java.util.function.Consumer;
 
@@ -38,7 +37,7 @@ public class ConnectionPoolConfigurationBuilder {
     private ConnectionPoolConfiguration.PoolImplementation poolImplementation = ConnectionPoolConfiguration.PoolImplementation.DEFAULT;
     private ConnectionFactoryConfiguration connectionFactoryConfiguration;
     private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.OFF;
-    private TransactionIntegration transactionIntegration = new EmptyTransactionIntegration();
+    private TransactionSupport transactionSupport = TransactionSupport.noSupport();
     private volatile int minSize = 0;
     private volatile int maxSize = 0;
     private ConnectionValidator connectionValidator = ConnectionValidator.emptyValidator();
@@ -70,8 +69,8 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfigurationBuilder.build() );
     }
 
-    public ConnectionPoolConfigurationBuilder setTransactionIntegration(TransactionIntegration transactionIntegration) {
-        return applySetting( c -> c.transactionIntegration = transactionIntegration );
+    public ConnectionPoolConfigurationBuilder setTransactionSupport(TransactionSupport transactionSupport) {
+        return applySetting( c -> c.transactionSupport = transactionSupport );
     }
 
     public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
@@ -128,8 +127,8 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public TransactionIntegration transactionIntegration() {
-                return transactionIntegration;
+            public TransactionSupport transactionIntegration() {
+                return transactionSupport;
             }
 
             @Override

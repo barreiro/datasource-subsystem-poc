@@ -22,22 +22,19 @@
 
 package org.wildfly.datasource.api.tx;
 
-import org.wildfly.datasource.api.ConnectionHandler;
+import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class EmptyTransactionIntegration implements TransactionIntegration {
+public interface TransactionalResource {
 
-    public ConnectionHandler getConnectionHandler() {
-        return null;
-    }
+    void transactionLock() throws SQLException;
 
-    public void associate(ConnectionHandler handler) {
-    }
+    void commit() throws SQLException;
 
-    public boolean disassociate(ConnectionHandler handler) {
-        return true;
-    }
+    void rollback() throws SQLException;
+
+    void transactionUnlock() throws SQLException;
 
 }

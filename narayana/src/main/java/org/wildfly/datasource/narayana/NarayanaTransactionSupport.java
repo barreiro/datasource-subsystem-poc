@@ -22,21 +22,22 @@
 
 package org.wildfly.datasource.narayana;
 
-import org.wildfly.datasource.api.ConnectionHandler;
-import org.wildfly.datasource.api.tx.TransactionIntegration;
+import org.wildfly.datasource.api.tx.TransactionSupport;
+import org.wildfly.datasource.api.tx.TransactionalResource;
 
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.TransactionSynchronizationRegistry;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.UUID;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class NarayanaTransactionIntegration implements TransactionIntegration {
+public class NarayanaTransactionSupport implements TransactionSupport {
 
     private final TransactionManager transactionManager;
 
@@ -44,18 +45,18 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
 
     private final String key;
 
-    public NarayanaTransactionIntegration(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
+    public NarayanaTransactionSupport(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
         this.transactionManager = transactionManager;
         this.transactionSynchronizationRegistry = transactionSynchronizationRegistry;
         this.key = UUID.randomUUID().toString();
     }
 
-    public ConnectionHandler getConnectionHandler() throws SQLException {
+    public Connection getConnection() throws SQLException {
         try {
             Transaction transaction = transactionManager.getTransaction();
             if ( transaction != null &&
                     ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK ) ) {
-                return (ConnectionHandler) transactionSynchronizationRegistry.getResource( key );
+                return (Connection) transactionSynchronizationRegistry.getResource( key );
             }
             return null;
         } catch ( Exception e ) {
@@ -63,7 +64,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
         }
     }
 
-    public void associate(ConnectionHandler handler) throws SQLException {
+    public void associate(Connection connection) throws SQLException {
         try {
             Transaction transaction = transactionManager.getTransaction();
             if ( transaction == null ) {
@@ -71,7 +72,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
             }
 
             if ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK ) {
-                transactionSynchronizationRegistry.putResource( key, handler );
+                transactionSynchronizationRegistry.putResource( key, connection );
                 transactionSynchronizationRegistry.registerInterposedSynchronization( new Synchronization() {
                     @Override
                     public void beforeCompletion() {}
@@ -79,12 +80,11 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
                     @Override
                     public void afterCompletion(int status) {
                         try { // Return connection to the pool
-                            // TODO: this closes underlying connection!!! FIX
-                            handler.getConnection().isClosed();
+                            connection.close();
                         } catch ( SQLException ignore ) {}
                     }
                 } );
-                transaction.enlistResource( new LocalXAResource( handler ) );
+                transaction.enlistResource( new LocalXAResource( (TransactionalResource) connection ) );
             } else {
                 throw new SQLException( "Transaction not in ACTIVE state" );
             }
@@ -93,7 +93,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
         }
     }
 
-    public boolean disassociate(ConnectionHandler handler) throws SQLException {
+    public boolean disassociate(Connection connection) throws SQLException {
         try {
             transactionSynchronizationRegistry.putResource( key, null );
             return true;

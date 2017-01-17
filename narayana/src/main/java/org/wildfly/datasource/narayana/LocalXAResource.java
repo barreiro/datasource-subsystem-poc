@@ -24,7 +24,7 @@ package org.wildfly.datasource.narayana;
 
 import org.jboss.tm.LastResource;
 import org.jboss.tm.XAResourceWrapper;
-import org.wildfly.datasource.api.ConnectionHandler;
+import org.wildfly.datasource.api.tx.TransactionalResource;
 
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -35,7 +35,7 @@ import javax.transaction.xa.Xid;
  */
 public class LocalXAResource implements XAResource, LastResource, XAResourceWrapper {
 
-    private final ConnectionHandler connectionHandler;
+    private final TransactionalResource connection;
 
     private Xid currentXid;
 
@@ -45,8 +45,8 @@ public class LocalXAResource implements XAResource, LastResource, XAResourceWrap
 
     private String jndiName;
 
-    public LocalXAResource(ConnectionHandler handler) {
-        this.connectionHandler = handler;
+    public LocalXAResource(TransactionalResource connection) {
+        this.connection = connection;
     }
 
     @Override
@@ -60,7 +60,7 @@ public class LocalXAResource implements XAResource, LastResource, XAResourceWrap
                 throw new XAException( "Starting resource with wrong flags" );
             }
             try {
-                connectionHandler.transactionLock();
+                connection.transactionLock();
             } catch ( Throwable t ) {
                 throw new XAException( "Error trying to start local transaction: " + t.getMessage() );
             }
@@ -76,8 +76,8 @@ public class LocalXAResource implements XAResource, LastResource, XAResourceWrap
         currentXid = null;
 
         try {
-            connectionHandler.getConnection().commit();
-            connectionHandler.transactionUnlock();
+            connection.commit();
+            connection.transactionUnlock();
         } catch ( Throwable t ) {
             throw new XAException( "Error trying to commit local transaction: " + t.getMessage() );
         }
@@ -91,8 +91,8 @@ public class LocalXAResource implements XAResource, LastResource, XAResourceWrap
         currentXid = null;
 
         try {
-            connectionHandler.getConnection().rollback();
-            connectionHandler.transactionUnlock();
+            connection.rollback();
+            connection.transactionUnlock();
         } catch ( Throwable t ) {
             throw new XAException( "Error trying to rollback local transaction: " + t.getMessage() );
         }

@@ -22,7 +22,6 @@
 
 package org.wildfly.datasource.integrated;
 
-import org.wildfly.datasource.api.ConnectionHandler;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
 import org.wildfly.datasource.api.security.NamePrincipal;
 import org.wildfly.datasource.api.security.SimplePassword;

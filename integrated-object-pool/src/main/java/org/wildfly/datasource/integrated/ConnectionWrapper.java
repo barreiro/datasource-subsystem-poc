@@ -22,7 +22,7 @@
 
 package org.wildfly.datasource.integrated;
 
-import org.wildfly.datasource.api.ConnectionHandler;
+import org.wildfly.datasource.api.tx.TransactionalResource;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -48,18 +48,33 @@ import java.util.concurrent.Executor;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class ConnectionWrapper implements Connection {
+public class ConnectionWrapper implements Connection, TransactionalResource {
 
-    private final ConnectionPool pool;
     private final ConnectionHandler handler;
     private final InterruptProtection interruptProtection;
     private Connection wrappedConnection;
 
-    public ConnectionWrapper(ConnectionPool connectionPool, ConnectionHandler connectionHandler, InterruptProtection protection) {
-        pool = connectionPool;
+    private boolean inTransaction;
+    private boolean autocommitCache;
+
+    public ConnectionWrapper(ConnectionHandler connectionHandler, InterruptProtection protection) {
         handler = connectionHandler;
         interruptProtection = protection;
         wrappedConnection = connectionHandler.getConnection();
+        inTransaction = false;
+    }
+
+    // --- //
+
+    public void transactionLock() throws SQLException {
+        autocommitCache = wrappedConnection.getAutoCommit();
+        wrappedConnection.setAutoCommit( false );
+        inTransaction = true;
+    }
+
+    public void transactionUnlock() throws SQLException {
+        inTransaction = false;
+        wrappedConnection.setAutoCommit( autocommitCache );
     }
 
     // --- //
@@ -74,10 +89,14 @@ public class ConnectionWrapper implements Connection {
 
     // --- //
 
+    public ConnectionHandler getHandler() {
+        return handler;
+    }
+
     @Override
     public void close() throws SQLException {
         wrappedConnection = CLOSED_CONNECTION;
-        pool.returnConnection( handler );
+        handler.returnConnection();
     }
 
     @Override
@@ -147,7 +166,7 @@ public class ConnectionWrapper implements Connection {
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
-        if ( autoCommit && handler.isInTransaction() ) {
+        if ( autoCommit && inTransaction ) {
             throw new SQLException( "Trying to set autocommit in connection taking part of transaction" );
         }
         wrappedConnection.setAutoCommit( autoCommit );

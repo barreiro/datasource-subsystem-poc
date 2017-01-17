@@ -22,19 +22,38 @@
 
 package org.wildfly.datasource.api.tx;
 
-import org.wildfly.datasource.api.ConnectionHandler;
-
+import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface TransactionIntegration {
+public interface TransactionSupport {
 
-    ConnectionHandler getConnectionHandler() throws SQLException;
+    Connection getConnection() throws SQLException;
 
-    void associate(ConnectionHandler handler) throws SQLException;
+    void associate(Connection connection) throws SQLException;
 
-    boolean disassociate(ConnectionHandler handler) throws SQLException;
+    boolean disassociate(Connection connection) throws SQLException;
 
+    // --- //
+
+    static TransactionSupport noSupport() {
+        return new TransactionSupport() {
+
+            @Override
+            public Connection getConnection() throws SQLException {
+                return null;
+            }
+
+            @Override
+            public void associate(Connection connection) throws SQLException {
+            }
+
+            @Override
+            public boolean disassociate(Connection connection) throws SQLException {
+                return true;
+            }
+        };
+    }
 }

@@ -2,7 +2,6 @@ package org.wildfly.datasource.narayana;
 
 import com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionSynchronizationRegistryImple;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
@@ -11,8 +10,6 @@ import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuild
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.NotSupportedException;
@@ -22,9 +19,6 @@ import javax.transaction.TransactionManager;
 import javax.transaction.TransactionSynchronizationRegistry;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -42,7 +36,7 @@ public class BasicTest {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setTransactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
+                        .setTransactionSupport( new NarayanaTransactionSupport( txManager, txSyncRegistry ) )
                         .setMinSize( 5 )
                         .setMaxSize( 10 )
                         .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
@@ -52,7 +46,7 @@ public class BasicTest {
                         )
                 );
 
-        try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
+        try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             for ( int i = 0; i < 50; i++ ) {
                 try {
                     txManager.begin();
@@ -60,12 +54,56 @@ public class BasicTest {
                     Connection connection = dataSource.getConnection();
                     System.out.println( "connection " + i + " = " + connection );
 
+                    try {
+                        connection.setAutoCommit( true );
+                        Assert.fail( "Expected exception while setting autocommit" );
+                    } catch ( SQLException e ) { // Expected
+                    }
+
                     txManager.commit();
-                    connection.close();
                 } catch ( NotSupportedException | SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException e ) {
                     Assert.fail( "Kaboom: " + e.getMessage() );
                 }
+            }
+        }
+    }
 
+
+    @Test
+    public void rollbackTest() throws SQLException {
+        DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
+                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
+                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
+                        .setTransactionSupport( new NarayanaTransactionSupport( txManager, txSyncRegistry ) )
+                        .setMinSize( 5 )
+                        .setMaxSize( 10 )
+                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
+                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
+                                .setDriverClassName( H2_DRIVER_CLASS )
+                                .setJdbcUrl( H2_JDBC_URL )
+                        )
+                );
+
+        try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
+            for ( int i = 0; i < 50; i++ ) {
+                try {
+                    txManager.begin();
+
+                    Connection connection = dataSource.getConnection();
+                    System.out.println( "connection " + i + " = " + connection );
+
+                    try {
+                        connection.setAutoCommit( true );
+                        Assert.fail( "Expected exception while setting autocommit" );
+                    } catch ( SQLException e ) { // Expected
+                    }
+
+                    Assert.assertTrue( connection.unwrap( Connection.class ) == dataSource.getConnection().unwrap( Connection.class ) );
+
+                    txManager.rollback();
+                } catch ( NotSupportedException | SystemException e ) {
+                    Assert.fail( "Kaboom: " + e.getMessage() );
+                }
             }
         }
     }
