@@ -230,7 +230,7 @@ public class ConnectionPool implements AutoCloseable {
         if ( reapEnable ) {
             handler.setLastAccess( System.nanoTime() );
         }
-        if ( transactionIntegration.disasssociate( handler ) ) {
+        if ( transactionIntegration.disassociate( handler ) ) {
             localCache.get().add( handler );
             handler.setState( CHECKED_IN );
             synchronizer.releaseConditional();

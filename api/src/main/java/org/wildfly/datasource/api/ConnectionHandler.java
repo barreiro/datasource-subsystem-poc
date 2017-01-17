@@ -25,23 +25,21 @@ package org.wildfly.datasource.api;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.atomic.LongAdder;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
+
+// TODO: Sort the transaction SPI so that it can be moved back to integrated module
+
 public class ConnectionHandler {
 
-    public enum State {
-        NEW, CHECKED_IN, CHECKED_OUT, VALIDATION, FLUSH, DESTROYED
-    }
-
+    private final static AtomicReferenceFieldUpdater<ConnectionHandler, State> stateUpdater = AtomicReferenceFieldUpdater.newUpdater( ConnectionHandler.class, State.class, "state" );
     private final Connection connection;
 
     // Can use annotation to get a little better performance
     // @Contended
     private volatile State state;
-    private final static AtomicReferenceFieldUpdater<ConnectionHandler, State> stateUpdater = AtomicReferenceFieldUpdater.newUpdater( ConnectionHandler.class, State.class, "state" );
 
     // for leak detection (only valid for CHECKED_OUT connections)
     private Thread holdingThread;
@@ -49,10 +47,14 @@ public class ConnectionHandler {
     // for expiration (CHECKED_IN connections) and leak detection (CHECKED_OUT connections)
     private long lastAccess;
 
+    private boolean inTransaction;
+    private boolean autocommitCache;
+
     public ConnectionHandler(Connection connection) {
         this.connection = connection;
         state = State.NEW;
         lastAccess = System.currentTimeMillis();
+        inTransaction = false;
     }
 
     public Connection getConnection() {
@@ -67,7 +69,7 @@ public class ConnectionHandler {
     }
 
     public boolean setState(State expected, State newState) {
-        if (expected == State.DESTROYED) {
+        if ( expected == State.DESTROYED ) {
             throw new IllegalArgumentException( "Trying to move out of state DESTROYED" );
         }
 
@@ -94,6 +96,10 @@ public class ConnectionHandler {
         return stateUpdater.get( this ) == State.CHECKED_OUT;
     }
 
+    public boolean isInTransaction() {
+        return inTransaction;
+    }
+
     public long getLastAccess() {
         return lastAccess;
     }
@@ -108,6 +114,23 @@ public class ConnectionHandler {
 
     public void setHoldingThread(Thread holdingThread) {
         this.holdingThread = holdingThread;
+    }
+
+    public void transactionLock() throws SQLException {
+        autocommitCache = connection.getAutoCommit();
+        connection.setAutoCommit( false );
+        inTransaction = true;
+    }
+
+    public void transactionUnlock() throws SQLException {
+        inTransaction = false;
+        connection.setAutoCommit( autocommitCache );
+    }
+
+    // --- //
+
+    public enum State {
+        NEW, CHECKED_IN, CHECKED_OUT, VALIDATION, FLUSH, DESTROYED
     }
 
 }

@@ -20,10 +20,10 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.tx;
-
+package org.wildfly.datasource.narayana;
 
 import org.wildfly.datasource.api.ConnectionHandler;
+import org.wildfly.datasource.api.tx.TransactionIntegration;
 
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
@@ -36,10 +36,7 @@ import java.util.UUID;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-
-// TODO: Move to own module!
-
-public class JTATransactionIntegration implements TransactionIntegration {
+public class NarayanaTransactionIntegration implements TransactionIntegration {
 
     private final TransactionManager transactionManager;
 
@@ -47,7 +44,7 @@ public class JTATransactionIntegration implements TransactionIntegration {
 
     private final String key;
 
-    public JTATransactionIntegration(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
+    public NarayanaTransactionIntegration(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
         this.transactionManager = transactionManager;
         this.transactionSynchronizationRegistry = transactionSynchronizationRegistry;
         this.key = UUID.randomUUID().toString();
@@ -82,7 +79,8 @@ public class JTATransactionIntegration implements TransactionIntegration {
                     @Override
                     public void afterCompletion(int status) {
                         try { // Return connection to the pool
-                            handler.getConnection().close();
+                            // TODO: this closes underlying connection!!! FIX
+                            handler.getConnection().isClosed();
                         } catch ( SQLException ignore ) {}
                     }
                 } );
@@ -100,7 +98,8 @@ public class JTATransactionIntegration implements TransactionIntegration {
             transactionSynchronizationRegistry.putResource( key, null );
             return true;
         } catch ( Exception e ) {
-            throw new SQLException( "Exception in disassociation of connection to existing transaction", e );
+//            throw new SQLException( "Exception in disassociation of connection to existing transaction", e );
+            return true;
         }
     }
 

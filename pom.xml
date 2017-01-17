@@ -38,6 +38,7 @@
         <module>impl</module>
         <module>integrated-object-pool</module>
         <module>hikari</module>
+        <module>narayana</module>
 
         <module>benchmark</module>
     </modules>
@@ -56,6 +57,9 @@
         <version.com.zaxxer.hikari>2.4.7</version.com.zaxxer.hikari>
         <version.javax.transation>1.2</version.javax.transation>
         <version.org.junit>4.12</version.org.junit>
+        <version.org.jboss>7.3.1.Final</version.org.jboss>
+        <version.org.jboss.logging>3.3.0.Final</version.org.jboss.logging>
+        <version.org.jboss.narayana>5.3.3.Final</version.org.jboss.narayana>
         <version.org.openjdk.jmh>1.13</version.org.openjdk.jmh>
     </properties>
 

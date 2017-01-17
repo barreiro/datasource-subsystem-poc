@@ -20,8 +20,10 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.api.tx;
+package org.wildfly.datasource.narayana;
 
+import org.jboss.tm.LastResource;
+import org.jboss.tm.XAResourceWrapper;
 import org.wildfly.datasource.api.ConnectionHandler;
 
 import javax.transaction.xa.XAException;
@@ -31,16 +33,17 @@ import javax.transaction.xa.Xid;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-
-// TODO: Move to own module!
-
-public class LocalXAResource implements XAResource {
+public class LocalXAResource implements XAResource, LastResource, XAResourceWrapper {
 
     private final ConnectionHandler connectionHandler;
 
     private Xid currentXid;
 
-    private boolean autocommit;
+    private String productName;
+
+    private String productVersion;
+
+    private String jndiName;
 
     public LocalXAResource(ConnectionHandler handler) {
         this.connectionHandler = handler;
@@ -52,17 +55,14 @@ public class LocalXAResource implements XAResource {
             if ( flags != TMJOIN && flags != TMRESUME ) {
                 throw new XAException( XAException.XAER_DUPID );
             }
-        }
-        else {
+        } else {
             if ( flags != TMNOFLAGS ) {
                 throw new XAException( "Starting resource with wrong flags" );
             }
             try {
-                autocommit = connectionHandler.getConnection().getAutoCommit();
-                connectionHandler.getConnection().setAutoCommit( false );
-            }
-            catch (Throwable t)             {
-                throw new XAException( "Error trying to start local transaction" );
+                connectionHandler.transactionLock();
+            } catch ( Throwable t ) {
+                throw new XAException( "Error trying to start local transaction: " + t.getMessage() );
             }
             currentXid = xid;
         }
@@ -77,9 +77,9 @@ public class LocalXAResource implements XAResource {
 
         try {
             connectionHandler.getConnection().commit();
-        }
-        catch (Throwable t)             {
-            throw new XAException( "Error trying to commit local transaction" );
+            connectionHandler.transactionUnlock();
+        } catch ( Throwable t ) {
+            throw new XAException( "Error trying to commit local transaction: " + t.getMessage() );
         }
     }
 
@@ -92,22 +92,15 @@ public class LocalXAResource implements XAResource {
 
         try {
             connectionHandler.getConnection().rollback();
-        }
-        catch (Throwable t) {
-            throw new XAException( "Error trying to rollback local transaction" );
+            connectionHandler.transactionUnlock();
+        } catch ( Throwable t ) {
+            throw new XAException( "Error trying to rollback local transaction: " + t.getMessage() );
         }
     }
 
     @Override
     public void end(Xid xid, int flags) throws XAException {
-        try {
-            connectionHandler.getConnection().setAutoCommit( autocommit );
-        }
-        catch (Throwable t)             {
-            throw new XAException( "Error trying to re-set auto-commit" );
-        }
     }
-
 
     @Override
     public void forget(Xid xid) throws XAException {
@@ -134,10 +127,31 @@ public class LocalXAResource implements XAResource {
         throw new XAException( "No recover in local XA resource" );
     }
 
-
     @Override
     public boolean setTransactionTimeout(int timeout) throws XAException {
         return false;
+    }
+
+    // --- XA Resource Wrapper //
+
+    @Override
+    public XAResource getResource() {
+        return this;
+    }
+
+    @Override
+    public String getProductName() {
+        return productName;
+    }
+
+    @Override
+    public String getProductVersion() {
+        return productVersion;
+    }
+
+    @Override
+    public String getJndiName() {
+        return jndiName;
     }
 
 }

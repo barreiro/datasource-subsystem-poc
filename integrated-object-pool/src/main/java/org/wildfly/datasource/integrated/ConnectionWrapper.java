@@ -147,6 +147,9 @@ public class ConnectionWrapper implements Connection {
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
+        if ( autoCommit && handler.isInTransaction() ) {
+            throw new SQLException( "Trying to set autocommit in connection taking part of transaction" );
+        }
         wrappedConnection.setAutoCommit( autoCommit );
     }
 
