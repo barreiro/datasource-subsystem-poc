@@ -26,6 +26,8 @@ import org.wildfly.datasource.api.ConnectionValidator;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -57,53 +59,66 @@ public class ConnectionPoolConfigurationBuilder {
         return this;
     }
 
-    public ConnectionPoolConfigurationBuilder setPoolImplementation(ConnectionPoolConfiguration.PoolImplementation poolImplementation) {
-        return applySetting( c -> c.poolImplementation = poolImplementation );
-    }
-
-    public ConnectionPoolConfigurationBuilder setConnectionFactoryConfiguration(ConnectionFactoryConfiguration connectionFactoryConfiguration) {
+    public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(ConnectionFactoryConfiguration connectionFactoryConfiguration) {
         return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfiguration );
     }
 
-    public ConnectionPoolConfigurationBuilder setConnectionFactoryConfiguration(ConnectionFactoryConfigurationBuilder connectionFactoryConfigurationBuilder) {
+    public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(ConnectionFactoryConfigurationBuilder connectionFactoryConfigurationBuilder) {
         return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfigurationBuilder.build() );
     }
 
-    public ConnectionPoolConfigurationBuilder setTransactionIntegration(TransactionIntegration transactionIntegration) {
+    public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(Supplier<ConnectionFactoryConfiguration> supplier) {
+        return applySetting( c -> c.connectionFactoryConfiguration = supplier.get() );
+    }
+
+    public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(Function<ConnectionFactoryConfigurationBuilder, ConnectionFactoryConfigurationBuilder> function) {
+        return applySetting( c -> c.connectionFactoryConfiguration = function.apply( new ConnectionFactoryConfigurationBuilder() ).build() );
+    }
+
+    // --- //
+
+    public ConnectionPoolConfigurationBuilder poolImplementation(ConnectionPoolConfiguration.PoolImplementation poolImplementation) {
+        return applySetting( c -> c.poolImplementation = poolImplementation );
+    }
+
+    public ConnectionPoolConfigurationBuilder transactionIntegration(TransactionIntegration transactionIntegration) {
         return applySetting( c -> c.transactionIntegration = transactionIntegration );
     }
 
-    public ConnectionPoolConfigurationBuilder setPreFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
+    public ConnectionPoolConfigurationBuilder preFillMode(ConnectionPoolConfiguration.PreFillMode preFillMode) {
         return applySetting( c -> c.preFillMode = preFillMode );
     }
 
-    public ConnectionPoolConfigurationBuilder setMinSize(int minSize) {
+    public ConnectionPoolConfigurationBuilder minSize(int minSize) {
         return applySetting( c -> c.minSize = minSize );
     }
 
-    public ConnectionPoolConfigurationBuilder setMaxSize(int maxSize) {
+    public ConnectionPoolConfigurationBuilder maxSize(int maxSize) {
         return applySetting( c -> c.maxSize = maxSize );
     }
 
-    public ConnectionPoolConfigurationBuilder setAcquisitionTimeout(int acquisitionTimeout) {
+    public ConnectionPoolConfigurationBuilder acquisitionTimeout(int acquisitionTimeout) {
         return applySetting( c -> c.acquisitionTimeout = acquisitionTimeout );
     }
 
-    public ConnectionPoolConfigurationBuilder setConnectionValidator(ConnectionValidator connectionValidator) {
+    public ConnectionPoolConfigurationBuilder connectionValidator(ConnectionValidator connectionValidator) {
         return applySetting( c -> c.connectionValidator = connectionValidator );
     }
 
-    public ConnectionPoolConfigurationBuilder setConnectionValidationTimeout(long connectionValidationTimeout) {
+    public ConnectionPoolConfigurationBuilder connectionValidationTimeout(long connectionValidationTimeout) {
         return applySetting( c -> c.connectionValidationTimeout = connectionValidationTimeout );
     }
 
-    public ConnectionPoolConfigurationBuilder setConnectionReapTimeout(long connectionReapTimeout) {
+    public ConnectionPoolConfigurationBuilder connectionReapTimeout(long connectionReapTimeout) {
         return applySetting( c -> c.connectionReapTimeout = connectionReapTimeout );
     }
 
     private void validate() {
+        if ( minSize < 0 ) {
+            throw new IllegalArgumentException( "Invalid min size" );
+        }
         if ( minSize > maxSize ) {
-            throw new IllegalArgumentException( "Wrong size of min / maz size" );
+            throw new IllegalArgumentException( "Wrong size of min / max size" );
         }
         if ( connectionFactoryConfiguration == null ) {
             throw new IllegalArgumentException( "Connection factory configuration not defined" );

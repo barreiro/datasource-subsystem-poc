@@ -22,20 +22,17 @@
 
 package org.wildfly.datasource.api.configuration;
 
+import static java.lang.ClassLoader.getSystemClassLoader;
+
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public abstract class ClassLoaderProvider {
+public interface ClassLoaderProvider {
 
-    public static ClassLoaderProvider DEFAULT = new ClassLoaderProvider() {
+    static ClassLoaderProvider systemClassloader() {
+        return className -> getSystemClassLoader();
+    }
 
-        @Override
-        public ClassLoader getClassLoader(String className) {
-            return ClassLoader.getSystemClassLoader();
-        }
-
-    };
-
-    public abstract ClassLoader getClassLoader(String className);
+    ClassLoader getClassLoader(String className);
 
 }

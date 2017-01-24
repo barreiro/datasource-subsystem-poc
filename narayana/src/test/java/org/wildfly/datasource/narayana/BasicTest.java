@@ -3,13 +3,7 @@ package org.wildfly.datasource.narayana;
 import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
-import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
-import org.wildfly.datasource.api.security.NamePrincipal;
-import org.wildfly.datasource.api.security.SimplePassword;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -20,6 +14,9 @@ import javax.transaction.TransactionManager;
 import javax.transaction.TransactionSynchronizationRegistry;
 import java.sql.Connection;
 import java.sql.SQLException;
+
+import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MIN;
+import static org.wildfly.datasource.api.configuration.DataSourceConfiguration.DataSourceImplementation.INTEGRATED;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -35,15 +32,15 @@ public class BasicTest {
     @Test
     public void basicTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setTransactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
-                        .setMinSize( 5 )
-                        .setMaxSize( 10 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( INTEGRATED )
+                .connectionPoolConfiguration( cp -> cp
+                        .transactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
+                        .minSize( 5 )
+                        .maxSize( 10 )
+                        .preFillMode( MIN )
+                        .connectionFactoryConfiguration( cf -> cf
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 
@@ -73,15 +70,15 @@ public class BasicTest {
     @Test
     public void rollbackTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setTransactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
-                        .setMinSize( 5 )
-                        .setMaxSize( 10 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( INTEGRATED )
+                .connectionPoolConfiguration( cp -> cp
+                        .transactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
+                        .minSize( 5 )
+                        .maxSize( 10 )
+                        .preFillMode( MIN )
+                        .connectionFactoryConfiguration( cf -> cf
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 

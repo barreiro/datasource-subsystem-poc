@@ -3,19 +3,14 @@ package org.wildlfy.datasource.integrated.test;
 import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
-import org.wildfly.datasource.api.WildFlyDataSourceListener;
-import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MIN;
+import static org.wildfly.datasource.api.configuration.DataSourceConfiguration.DataSourceImplementation.INTEGRATED;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -28,16 +23,16 @@ public class AcquisitionTimeoutTest {
     @Test
     public void basicAcquisitionTimeoutTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
-                .setMetricsEnabled( true )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMaxSize( 10 )
-                        .setConnectionValidationTimeout( 2 )
-                        .setAcquisitionTimeout( 1000 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( INTEGRATED )
+                .metricsEnabled( true )
+                .connectionPoolConfiguration( cp -> cp
+                        .maxSize( 10 )
+                        .connectionValidationTimeout( 2 )
+                        .acquisitionTimeout( 1000 )
+                        .preFillMode( MIN )
+                        .connectionFactoryConfiguration( cf -> cf
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 

@@ -100,7 +100,7 @@ public class ConnectionFactoryImpl {
     public ConnectionHandler createHandler() throws SQLException {
         Connection connection = driver.connect( configuration.jdbcUrl(), jdbcProperties );
         connection.setAutoCommit( configuration.autoCommit() );
-        connection.createStatement().execute( configuration.initSql() );
+        connection.createStatement().execute( configuration.initialSql() );
         return new ConnectionHandler( poolImpl, interruptProtection, connection );
     }
 

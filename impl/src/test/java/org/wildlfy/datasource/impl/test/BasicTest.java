@@ -26,14 +26,14 @@ public class BasicTest {
     @Test
     public void basicTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMinSize( 5 )
-                        .setMaxSize( 10 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
+                .connectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
+                        .minSize( 5 )
+                        .maxSize( 10 )
+                        .preFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
+                        .connectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 
@@ -49,15 +49,15 @@ public class BasicTest {
     @Test
     public void basicConcurrentTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
-                .setMetricsEnabled( true )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMinSize( 5 )
-                        .setMaxSize( 10 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.WILDFLY )
+                .metricsEnabled( true )
+                .connectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
+                        .minSize( 5 )
+                        .maxSize( 10 )
+                        .preFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
+                        .connectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 

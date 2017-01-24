@@ -55,8 +55,6 @@ public interface ConnectionPoolConfiguration {
     long acquisitionTimeout();
     void setAcquisitionTimeout(long timeout);
 
-    // TODO: Allow registration of listeners for changes ?!?!
-
     // --- //
 
     enum PoolImplementation {

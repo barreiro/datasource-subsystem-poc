@@ -23,11 +23,13 @@
 package org.wildfly.datasource.api.configuration;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class DataSourceConfigurationBuilder {
+public class DataSourceConfigurationBuilder implements Supplier<DataSourceConfiguration> {
 
     private volatile boolean lock;
 
@@ -49,29 +51,47 @@ public class DataSourceConfigurationBuilder {
         consumer.accept( this );
         return this;
     }
-    public DataSourceConfigurationBuilder setJndiName(String jndiName) {
-        return applySetting( c -> c.jndiName = jndiName );
-    }
 
-    public DataSourceConfigurationBuilder setConnectionPoolConfiguration(ConnectionPoolConfiguration connectionPoolConfiguration) {
+    public DataSourceConfigurationBuilder connectionPoolConfiguration(ConnectionPoolConfiguration connectionPoolConfiguration) {
         return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfiguration );
     }
 
-    public DataSourceConfigurationBuilder setConnectionPoolConfiguration(ConnectionPoolConfigurationBuilder connectionPoolConfigurationBuilder) {
+    public DataSourceConfigurationBuilder connectionPoolConfiguration(ConnectionPoolConfigurationBuilder connectionPoolConfigurationBuilder) {
         return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfigurationBuilder.build() );
     }
 
-    public DataSourceConfigurationBuilder setDataSourceImplementation(DataSourceConfiguration.DataSourceImplementation dataSourceImplementation) {
+    public DataSourceConfigurationBuilder connectionPoolConfiguration(Supplier<ConnectionPoolConfiguration> supplier) {
+        return applySetting( c -> c.connectionPoolConfiguration = supplier.get() );
+    }
+
+    public DataSourceConfigurationBuilder connectionPoolConfiguration(Function<ConnectionPoolConfigurationBuilder, ConnectionPoolConfigurationBuilder> function) {
+        return applySetting( c -> c.connectionPoolConfiguration = function.apply( new ConnectionPoolConfigurationBuilder() ).build() );
+    }
+
+    @Override
+    public DataSourceConfiguration get() {
+        return this.build();
+    }
+
+    // --- //
+
+    public DataSourceConfigurationBuilder dataSourceImplementation(DataSourceConfiguration.DataSourceImplementation dataSourceImplementation) {
         return applySetting( c -> c.dataSourceImplementation = dataSourceImplementation );
     }
 
-    public DataSourceConfigurationBuilder setXA(boolean isXA) {
+    public DataSourceConfigurationBuilder jndiName(String jndiName) {
+        return applySetting( c -> c.jndiName = jndiName );
+    }
+
+    public DataSourceConfigurationBuilder xa(boolean isXA) {
         return applySetting( c -> c.isXA = isXA );
     }
 
-    public DataSourceConfigurationBuilder setMetricsEnabled(boolean metricsEnabled) {
+    public DataSourceConfigurationBuilder metricsEnabled(boolean metricsEnabled) {
         return applySetting( c -> c.metricsEnabled = metricsEnabled );
     }
+
+    // --- //
 
     private void validate() {
         if ( connectionPoolConfiguration == null ) {

@@ -35,7 +35,7 @@ public interface ConnectionFactoryConfiguration {
 
     String jdbcUrl();
 
-    String initSql();
+    String initialSql();
 
     String driverClassName();
 

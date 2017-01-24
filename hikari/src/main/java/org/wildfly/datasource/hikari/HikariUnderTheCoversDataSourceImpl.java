@@ -73,7 +73,7 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
 
         hikariConfig.setJdbcUrl( factoryConfiguration.jdbcUrl() );
         hikariConfig.setAutoCommit( factoryConfiguration.autoCommit() );
-        hikariConfig.setConnectionInitSql( factoryConfiguration.initSql() );
+        hikariConfig.setConnectionInitSql( factoryConfiguration.initialSql() );
 
         Principal principal = factoryConfiguration.principal();
         if ( principal != null ) {

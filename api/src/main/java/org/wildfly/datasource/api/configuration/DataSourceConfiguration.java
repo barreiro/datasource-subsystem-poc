@@ -40,6 +40,8 @@ public interface DataSourceConfiguration {
     boolean metricsEnabled();
     void setMetricsEnabled(boolean metricsEnabled);
 
+    // TODO: Allow registration of listeners for changes ?!?!
+
     // --- //
 
     enum DataSourceImplementation {

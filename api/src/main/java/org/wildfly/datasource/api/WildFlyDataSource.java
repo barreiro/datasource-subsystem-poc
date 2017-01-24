@@ -30,6 +30,7 @@ import javax.sql.XADataSource;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
+import java.util.function.Supplier;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -47,6 +48,10 @@ public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSour
 
     // --- //
 
+    static WildFlyDataSource from(Supplier<DataSourceConfiguration> dataSourceConfigurationSupplier) throws SQLException {
+        return from( dataSourceConfigurationSupplier.get() );
+    }
+
     static WildFlyDataSource from(DataSourceConfigurationBuilder dataSourceConfigurationBuilder) throws SQLException {
         return from( dataSourceConfigurationBuilder.build() );
     }
@@ -55,11 +60,11 @@ public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSour
         String className;
         switch ( dataSourceConfiguration.dataSourceImplementation() ) {
             default:
-            case WILDFLY:
-                className = "org.wildfly.datasource.impl.WildFlyDataSourceImpl";
-                break;
             case INTEGRATED:
                 className = "org.wildfly.datasource.integrated.WildFlyDataSourceImpl";
+                break;
+            case WILDFLY:
+                className = "org.wildfly.datasource.impl.WildFlyDataSourceImpl";
                 break;
             case HIKARI:
                 if ( dataSourceConfiguration.isXA() ) {
@@ -69,7 +74,6 @@ public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSour
                 break;
         }
 
-        // refactor after java9 (private methods in interfaces)
         try {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             Class<?> dataSourceClass = classLoader.loadClass( className );

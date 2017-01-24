@@ -4,10 +4,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
-import org.wildfly.datasource.api.configuration.ConnectionFactoryConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
-import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
-import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import java.sql.Connection;
@@ -16,6 +12,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MIN;
+import static org.wildfly.datasource.api.configuration.DataSourceConfiguration.DataSourceImplementation.INTEGRATED;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -28,16 +27,16 @@ public class ValidationTest {
     @Test
     public void basicValidationTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
-                .setMetricsEnabled( true )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMinSize( 10 )
-                        .setMaxSize( 10 )
-                        .setConnectionValidationTimeout( 2 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( INTEGRATED )
+                .metricsEnabled( true )
+                .connectionPoolConfiguration( cp -> cp
+                        .minSize( 10 )
+                        .maxSize( 10 )
+                        .connectionValidationTimeout( 2 )
+                        .preFillMode( MIN )
+                        .connectionFactoryConfiguration( cf -> cf
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 
@@ -76,16 +75,16 @@ public class ValidationTest {
     @Test
     public void basicLeakTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
-                .setMetricsEnabled( true )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMinSize( 7 )
-                        .setMaxSize( 10 )
-                        .setConnectionValidationTimeout( 2 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( INTEGRATED )
+                .metricsEnabled( true )
+                .connectionPoolConfiguration( cp -> cp
+                        .minSize( 7 )
+                        .maxSize( 10 )
+                        .connectionValidationTimeout( 2 )
+                        .preFillMode( MIN )
+                        .connectionFactoryConfiguration( cf -> cf
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 
@@ -124,16 +123,16 @@ public class ValidationTest {
     @Test
     public void basicReapTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
-                .setMetricsEnabled( true )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setMinSize( 10 )
-                        .setMaxSize( 15 )
-                        .setConnectionReapTimeout( 2 )
-                        .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( INTEGRATED )
+                .metricsEnabled( true )
+                .connectionPoolConfiguration( cp -> cp
+                        .minSize( 10 )
+                        .maxSize( 15 )
+                        .connectionReapTimeout( 2 )
+                        .preFillMode( MIN )
+                        .connectionFactoryConfiguration( cf -> cf
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
                 );
 

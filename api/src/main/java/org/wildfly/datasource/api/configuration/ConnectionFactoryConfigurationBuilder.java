@@ -40,7 +40,7 @@ public class ConnectionFactoryConfigurationBuilder {
 
     private boolean autoCommit = false;
     private String jdbcUrl = "";
-    private String initSql = "";
+    private String initialSql = "";
     private String driverClassName = "";
     private ClassLoaderProvider classLoaderProvider;
     private ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation;
@@ -61,52 +61,47 @@ public class ConnectionFactoryConfigurationBuilder {
         return this;
     }
 
-    public ConnectionFactoryConfigurationBuilder setAutoCommit(boolean autoCommit) {
+    public ConnectionFactoryConfigurationBuilder autoCommit(boolean autoCommit) {
         return applySetting( c -> c.autoCommit = autoCommit );
     }
 
-    public ConnectionFactoryConfigurationBuilder setJdbcUrl(String jdbcUrl) {
+    public ConnectionFactoryConfigurationBuilder jdbcUrl(String jdbcUrl) {
         return applySetting( c -> c.jdbcUrl = jdbcUrl );
     }
 
-    public ConnectionFactoryConfigurationBuilder setInitSql(String initSql) {
-        return applySetting( c -> c.initSql = initSql );
+    public ConnectionFactoryConfigurationBuilder initialSql(String initialSql) {
+        return applySetting( c -> c.initialSql = initialSql );
     }
 
-    public ConnectionFactoryConfigurationBuilder setDriverClassName(String driverClassName) {
+    public ConnectionFactoryConfigurationBuilder driverClassName(String driverClassName) {
         return applySetting( c -> c.driverClassName = driverClassName );
     }
 
-    public ConnectionFactoryConfigurationBuilder setClassLoaderProvider(ClassLoaderProvider classLoaderProvider) {
+    public ConnectionFactoryConfigurationBuilder classLoaderProvider(ClassLoaderProvider classLoaderProvider) {
         return applySetting( c -> c.classLoaderProvider = classLoaderProvider );
     }
 
-    public ConnectionFactoryConfigurationBuilder setClassLoader(ClassLoader classLoader) {
-        return applySetting( c -> c.classLoaderProvider = new ClassLoaderProvider() {
-            @Override
-            public ClassLoader getClassLoader(String className) {
-                return classLoader;
-            }
-        } );
+    public ConnectionFactoryConfigurationBuilder classLoader(ClassLoader classLoader) {
+        return applySetting( c -> c.classLoaderProvider = className -> classLoader );
     }
 
-    public ConnectionFactoryConfigurationBuilder setTransactionIsolation(ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation) {
+    public ConnectionFactoryConfigurationBuilder transactionIsolation(ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation) {
         return applySetting( c -> c.transactionIsolation = transactionIsolation );
     }
 
-    public ConnectionFactoryConfigurationBuilder setInterruptHandlingMode(ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode) {
+    public ConnectionFactoryConfigurationBuilder interruptHandlingMode(ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode) {
         return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
     }
 
-    public ConnectionFactoryConfigurationBuilder setPrincipal(Principal principal) {
+    public ConnectionFactoryConfigurationBuilder principal(Principal principal) {
         return applySetting( c -> c.principal = principal );
     }
 
-    public ConnectionFactoryConfigurationBuilder setCredential(Object credential) {
+    public ConnectionFactoryConfigurationBuilder credential(Object credential) {
         return applySetting( c -> c.credentials.add( credential ) );
     }
 
-    public ConnectionFactoryConfigurationBuilder setJdbcProperty(String key, String value) {
+    public ConnectionFactoryConfigurationBuilder jdbcProperty(String key, String value) {
         validateJdbcProperty( key );
         return applySetting( c -> c.jdbcProperties.put( key, value) );
     }
@@ -137,8 +132,8 @@ public class ConnectionFactoryConfigurationBuilder {
             }
 
             @Override
-            public String initSql() {
-                return initSql;
+            public String initialSql() {
+                return initialSql;
             }
 
             @Override
@@ -148,7 +143,7 @@ public class ConnectionFactoryConfigurationBuilder {
 
             @Override
             public ClassLoaderProvider classLoaderProvider() {
-                return classLoaderProvider != null ? classLoaderProvider : ClassLoaderProvider.DEFAULT;
+                return classLoaderProvider != null ? classLoaderProvider : ClassLoaderProvider.systemClassloader();
             }
 
             @Override

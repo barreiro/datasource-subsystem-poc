@@ -21,14 +21,14 @@ public class BasicTest {
     @Test
     public void basicTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
-                .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.HIKARI )
-                .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setConnectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
-                                .setDriverClassName( H2_DRIVER_CLASS )
-                                .setJdbcUrl( H2_JDBC_URL )
+                .dataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.HIKARI )
+                .connectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
+                        .connectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
+                                .driverClassName( H2_DRIVER_CLASS )
+                                .jdbcUrl( H2_JDBC_URL )
                         )
-                        .setMaxSize( 10 )
-                        .setConnectionValidationTimeout( 2000 )
+                        .maxSize( 10 )
+                        .connectionValidationTimeout( 2000 )
                 );
 
         try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
