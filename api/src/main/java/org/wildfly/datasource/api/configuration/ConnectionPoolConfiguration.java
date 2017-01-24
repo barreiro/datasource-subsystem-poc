@@ -23,7 +23,7 @@
 package org.wildfly.datasource.api.configuration;
 
 import org.wildfly.datasource.api.ConnectionValidator;
-import org.wildfly.datasource.api.tx.TransactionSupport;
+import org.wildfly.datasource.api.tx.TransactionIntegration;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -38,7 +38,7 @@ public interface ConnectionPoolConfiguration {
 
     ConnectionValidator connectionValidator();
 
-    TransactionSupport transactionIntegration();
+    TransactionIntegration transactionIntegration();
 
     long connectionValidationTimeout();
 

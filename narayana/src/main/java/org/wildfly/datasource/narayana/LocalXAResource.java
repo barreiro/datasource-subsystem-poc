@@ -22,6 +22,7 @@
 
 package org.wildfly.datasource.narayana;
 
+import org.jboss.tm.ConnectableResource;
 import org.jboss.tm.LastResource;
 import org.jboss.tm.XAResourceWrapper;
 import org.wildfly.datasource.api.tx.TransactionalResource;
@@ -33,7 +34,7 @@ import javax.transaction.xa.Xid;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class LocalXAResource implements XAResource, LastResource, XAResourceWrapper {
+public class LocalXAResource implements XAResource, ConnectableResource, LastResource, XAResourceWrapper {
 
     private final TransactionalResource connection;
 
@@ -154,4 +155,8 @@ public class LocalXAResource implements XAResource, LastResource, XAResourceWrap
         return jndiName;
     }
 
+    @Override
+    public Object getConnection() throws Throwable {
+        return connection;
+    }
 }

@@ -22,7 +22,7 @@
 
 package org.wildfly.datasource.narayana;
 
-import org.wildfly.datasource.api.tx.TransactionSupport;
+import org.wildfly.datasource.api.tx.TransactionIntegration;
 import org.wildfly.datasource.api.tx.TransactionalResource;
 
 import javax.transaction.Status;
@@ -37,56 +37,47 @@ import java.util.UUID;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class NarayanaTransactionSupport implements TransactionSupport {
+public class NarayanaTransactionIntegration implements TransactionIntegration {
 
     private final TransactionManager transactionManager;
 
     private final TransactionSynchronizationRegistry transactionSynchronizationRegistry;
 
-    private final String key;
+    // In order to construct a UID that is globally unique, simply pair a UID with an InetAddress.
+    private final UUID key = UUID.randomUUID();
 
-    public NarayanaTransactionSupport(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
+    public NarayanaTransactionIntegration(TransactionManager transactionManager, TransactionSynchronizationRegistry transactionSynchronizationRegistry) {
         this.transactionManager = transactionManager;
         this.transactionSynchronizationRegistry = transactionSynchronizationRegistry;
-        this.key = UUID.randomUUID().toString();
     }
 
     public Connection getConnection() throws SQLException {
-        try {
-            Transaction transaction = transactionManager.getTransaction();
-            if ( transaction != null &&
-                    ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK ) ) {
-                return (Connection) transactionSynchronizationRegistry.getResource( key );
-            }
-            return null;
-        } catch ( Exception e ) {
-            throw new SQLException( "Exception in getting existing transaction association", e );
+        if ( transactionRunning() ) {
+            return (Connection) transactionSynchronizationRegistry.getResource( key );
         }
+        return null;
     }
 
     public void associate(Connection connection) throws SQLException {
         try {
-            Transaction transaction = transactionManager.getTransaction();
-            if ( transaction == null ) {
-                return;
-            }
-
-            if ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK ) {
+            if ( transactionRunning() ) {
                 transactionSynchronizationRegistry.putResource( key, connection );
                 transactionSynchronizationRegistry.registerInterposedSynchronization( new Synchronization() {
                     @Override
-                    public void beforeCompletion() {}
+                    public void beforeCompletion() {
+                    }
 
                     @Override
                     public void afterCompletion(int status) {
                         try { // Return connection to the pool
                             connection.close();
-                        } catch ( SQLException ignore ) {}
+                        } catch ( SQLException ignore ) {
+                        }
                     }
                 } );
-                transaction.enlistResource( new LocalXAResource( (TransactionalResource) connection ) );
+                transactionManager.getTransaction().enlistResource( new LocalXAResource( (TransactionalResource) connection ) );
             } else {
-                throw new SQLException( "Transaction not in ACTIVE state" );
+                throw new SQLException( "Obtaining a connection outside the scope of an active transaction is not supported" );
             }
         } catch ( Exception e ) {
             throw new SQLException( "Exception in association of connection to existing transaction", e );
@@ -94,12 +85,18 @@ public class NarayanaTransactionSupport implements TransactionSupport {
     }
 
     public boolean disassociate(Connection connection) throws SQLException {
-        try {
+        if ( transactionRunning() ) {
             transactionSynchronizationRegistry.putResource( key, null );
-            return true;
+        }
+        return true;
+    }
+
+    private boolean transactionRunning() throws SQLException {
+        try {
+            Transaction transaction = transactionManager.getTransaction();
+            return transaction != null && ( transaction.getStatus() == Status.STATUS_ACTIVE || transaction.getStatus() == Status.STATUS_MARKED_ROLLBACK );
         } catch ( Exception e ) {
-//            throw new SQLException( "Exception in disassociation of connection to existing transaction", e );
-            return true;
+            throw new SQLException( "Exception in retrieving existing transaction", e );
         }
     }
 

@@ -106,7 +106,7 @@ public class ConnectionWrapper implements Connection, TransactionalResource {
 
     @Override
     public void commit() throws SQLException {
-        wrappedConnection.commit();
+        protect( () -> wrappedConnection.commit() );
     }
 
     @Override
@@ -375,6 +375,8 @@ public class ConnectionWrapper implements Connection, TransactionalResource {
             String methodName = method.getName();
             if ( "abort".equals( methodName ) ) {
                 return Void.TYPE;
+            } else if ( "isClosed".equals( methodName ) ) {
+                return Boolean.TRUE;
             } else if ( "isValid".equals( methodName ) ) {
                 return Boolean.FALSE;
             } else if ( "toString".equals( methodName ) ) {

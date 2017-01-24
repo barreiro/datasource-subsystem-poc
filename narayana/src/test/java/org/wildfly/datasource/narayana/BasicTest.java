@@ -1,6 +1,5 @@
 package org.wildfly.datasource.narayana;
 
-import com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionSynchronizationRegistryImple;
 import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
@@ -9,6 +8,8 @@ import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfigurationBuilder;
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
+import org.wildfly.datasource.api.security.NamePrincipal;
+import org.wildfly.datasource.api.security.SimplePassword;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -29,14 +30,14 @@ public class BasicTest {
     private static final String H2_DRIVER_CLASS = "org.h2.Driver";
 
     private TransactionManager txManager = com.arjuna.ats.jta.TransactionManager.transactionManager();
-    private TransactionSynchronizationRegistry txSyncRegistry = new TransactionSynchronizationRegistryImple();
+    private TransactionSynchronizationRegistry txSyncRegistry = new com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionSynchronizationRegistryImple();
 
     @Test
     public void basicTest() throws SQLException {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setTransactionSupport( new NarayanaTransactionSupport( txManager, txSyncRegistry ) )
+                        .setTransactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
                         .setMinSize( 5 )
                         .setMaxSize( 10 )
                         .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
@@ -74,7 +75,7 @@ public class BasicTest {
         DataSourceConfigurationBuilder dataSourceConfigurationBuilder = new DataSourceConfigurationBuilder()
                 .setDataSourceImplementation( DataSourceConfiguration.DataSourceImplementation.INTEGRATED )
                 .setConnectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
-                        .setTransactionSupport( new NarayanaTransactionSupport( txManager, txSyncRegistry ) )
+                        .setTransactionIntegration( new NarayanaTransactionIntegration( txManager, txSyncRegistry ) )
                         .setMinSize( 5 )
                         .setMaxSize( 10 )
                         .setPreFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
@@ -98,9 +99,12 @@ public class BasicTest {
                     } catch ( SQLException e ) { // Expected
                     }
 
-                    Assert.assertTrue( connection.unwrap( Connection.class ) == dataSource.getConnection().unwrap( Connection.class ) );
+                    Assert.assertTrue( connection == dataSource.getConnection() );
 
                     txManager.rollback();
+
+                    Assert.assertTrue( connection.isClosed() );
+
                 } catch ( NotSupportedException | SystemException e ) {
                     Assert.fail( "Kaboom: " + e.getMessage() );
                 }

@@ -24,7 +24,7 @@ package org.wildfly.datasource.integrated;
 
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
-import org.wildfly.datasource.api.tx.TransactionSupport;
+import org.wildfly.datasource.api.tx.TransactionIntegration;
 import org.wildfly.datasource.integrated.util.PoolSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
 import org.wildfly.datasource.integrated.util.UncheckedArrayList;
@@ -40,8 +40,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_IN;
 import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_OUT;
-import static org.wildfly.datasource.integrated.ConnectionHandler.State.FLUSH;
 import static org.wildfly.datasource.integrated.ConnectionHandler.State.DESTROYED;
+import static org.wildfly.datasource.integrated.ConnectionHandler.State.FLUSH;
 import static org.wildfly.datasource.integrated.ConnectionHandler.State.VALIDATION;
 
 /**
@@ -65,7 +65,7 @@ public class ConnectionPool implements AutoCloseable {
     private final ConnectionFactory connectionFactory;
     private final ScheduledExecutorService housekeepingExecutor;
     private final InterruptProtection interruptProtection;
-    private final TransactionSupport transactionSupport;
+    private final TransactionIntegration transactionIntegration;
 
     private final boolean validatingEnable, reapEnable;
     private volatile long maxUsed = 0;
@@ -79,14 +79,14 @@ public class ConnectionPool implements AutoCloseable {
 //        allConnections = new AtomicReferenceCopyOnWriteArrayList<>( ConnectionHandler.class );
 //        allConnections = new LockFreeCopyOnWriteArrayList<>( ConnectionHandler.class );
 //        allConnections = new SynchronizedCopyOnWriteArrayList<>( ConnectionHandler.class );
-        allConnections = new StampedCopyOnWriteArrayList<>(ConnectionHandler.class);
+        allConnections = new StampedCopyOnWriteArrayList<>( ConnectionHandler.class );
 
         localCache = ThreadLocal.withInitial( () -> new UncheckedArrayList<ConnectionHandler>( ConnectionHandler.class ) );
         connectionFactory = new ConnectionFactory( configuration.connectionFactoryConfiguration() );
         housekeepingExecutor = Executors.newSingleThreadScheduledExecutor( Executors.defaultThreadFactory() );
 
         interruptProtection = InterruptProtection.from( configuration.connectionFactoryConfiguration().interruptHandlingMode() );
-        transactionSupport = configuration.transactionIntegration();
+        transactionIntegration = configuration.transactionIntegration();
 
         validatingEnable = configuration.connectionValidationTimeout() > 0;
         reapEnable = configuration.connectionReapTimeout() > 0;
@@ -148,11 +148,9 @@ public class ConnectionPool implements AutoCloseable {
                 maxUsedCount();
 
                 dataSource.metricsRegistry().afterConnectionCreated( metricsStamp );
-            }
-            catch ( SQLException e ) {
+            } catch ( SQLException e ) {
                 throw new RuntimeException( e );
-            }
-            finally {
+            } finally {
                 // not strictly needed, but not harmful either
                 synchronizer.releaseConditional();
             }
@@ -165,7 +163,11 @@ public class ConnectionPool implements AutoCloseable {
         WildFlyDataSourceListener.fireBeforeConnectionAcquire( dataSource.listenerList() );
         long metricsStamp = dataSource.metricsRegistry().beforeConnectionAcquire();
 
-        ConnectionHandler checkedOutHandler = handlerFromTransaction();
+        ConnectionHandler checkedOutHandler = null;
+        ConnectionWrapper connectionWrapper = wrapperFromTransaction();
+        if ( connectionWrapper != null ) {
+            checkedOutHandler = connectionWrapper.getHandler();
+        }
         if ( checkedOutHandler == null ) {
             checkedOutHandler = handlerFromLocalCache();
         }
@@ -181,15 +183,17 @@ public class ConnectionPool implements AutoCloseable {
             checkedOutHandler.setHoldingThread( Thread.currentThread() );
         }
 
-        ConnectionWrapper connectionWrapper = new ConnectionWrapper( checkedOutHandler, interruptProtection );
-        transactionSupport.associate( connectionWrapper );
+        if ( connectionWrapper == null ) {
+            connectionWrapper = new ConnectionWrapper( checkedOutHandler, interruptProtection );
+            transactionIntegration.associate( connectionWrapper );
+        }
         return connectionWrapper;
     }
 
-    private ConnectionHandler handlerFromTransaction() throws SQLException {
-        Connection connection = transactionSupport.getConnection();
+    private ConnectionWrapper wrapperFromTransaction() throws SQLException {
+        Connection connection = transactionIntegration.getConnection();
         if ( connection != null ) {
-            return ( (ConnectionWrapper) connection ).getHandler();
+            return (ConnectionWrapper) connection;
         }
         return null;
     }
@@ -226,8 +230,7 @@ public class ConnectionPool implements AutoCloseable {
                 }
                 remaining -= System.nanoTime() - start;
             }
-        }
-        catch ( InterruptedException e) {
+        } catch ( InterruptedException e ) {
             throw new SQLException( "Interrupted while acquiring" );
         } catch ( ExecutionException e ) {
             throw new SQLException( "Exception while creating new connection", e );
@@ -240,7 +243,7 @@ public class ConnectionPool implements AutoCloseable {
         if ( reapEnable ) {
             handler.setLastAccess( System.nanoTime() );
         }
-        if ( transactionSupport.disassociate( handler.getConnection() ) ) {
+        if ( transactionIntegration.disassociate( handler.getConnection() ) ) {
             localCache.get().add( handler );
             handler.setState( CHECKED_IN );
             synchronizer.releaseConditional();
@@ -265,7 +268,7 @@ public class ConnectionPool implements AutoCloseable {
 
     public long availableCount() {
         ConnectionHandler[] handlers = allConnections.getUnderlyingArray();
-        return handlers.length - activeCount(handlers);
+        return handlers.length - activeCount( handlers );
     }
 
     public long maxUsedCount() {
@@ -293,8 +296,7 @@ public class ConnectionPool implements AutoCloseable {
                 for ( ConnectionHandler handler : allConnections.getUnderlyingArray() ) {
                     housekeepingExecutor.schedule( new ValidationTask( handler ), ++i * VALIDATION_INTERVAL_MS, MILLISECONDS );
                 }
-            }
-            finally {
+            } finally {
                 long validationOffset = MILLISECONDS.toSeconds( ++i * VALIDATION_INTERVAL_MS );
                 housekeepingExecutor.schedule( this, validationOffset + configuration.connectionValidationTimeout(), SECONDS );
             }
@@ -325,8 +327,7 @@ public class ConnectionPool implements AutoCloseable {
                     handler.setState( DESTROYED );
                     allConnections.remove( handler );
                 }
-            }
-            else {
+            } else {
                 if ( System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( LEAK_INTERVAL_S ) ) {
                     // Potential connection leak. Report.
                     WildFlyDataSourceListener.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
@@ -334,7 +335,7 @@ public class ConnectionPool implements AutoCloseable {
             }
         }
 
-        private void closeInvalidConnection( ConnectionHandler connectionWrapper ) {
+        private void closeInvalidConnection(ConnectionHandler connectionWrapper) {
             try {
                 connectionWrapper.closeConnection();
             } catch ( SQLException e ) {
@@ -383,15 +384,14 @@ public class ConnectionPool implements AutoCloseable {
                     closeIdleConnection( handler );
                     handler.setState( DESTROYED );
                     allConnections.remove( handler );
-                }
-                else {
+                } else {
                     handler.setState( CHECKED_IN );
 //                    System.out.println( "Connection " + handler.getConnection() + " used recently. Do not reap!" );
                 }
             }
         }
 
-        private void closeIdleConnection( ConnectionHandler handler ) {
+        private void closeIdleConnection(ConnectionHandler handler) {
             try {
                 handler.closeConnection();
             } catch ( SQLException e ) {

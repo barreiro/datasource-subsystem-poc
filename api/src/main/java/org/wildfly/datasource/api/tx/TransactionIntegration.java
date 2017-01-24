@@ -28,7 +28,7 @@ import java.sql.SQLException;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface TransactionSupport {
+public interface TransactionIntegration {
 
     Connection getConnection() throws SQLException;
 
@@ -38,8 +38,8 @@ public interface TransactionSupport {
 
     // --- //
 
-    static TransactionSupport noSupport() {
-        return new TransactionSupport() {
+    static TransactionIntegration none() {
+        return new TransactionIntegration() {
 
             @Override
             public Connection getConnection() throws SQLException {
