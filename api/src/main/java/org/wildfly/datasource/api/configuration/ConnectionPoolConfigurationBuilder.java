@@ -22,7 +22,6 @@
 
 package org.wildfly.datasource.api.configuration;
 
-import org.wildfly.datasource.api.ConnectionValidator;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
 
 import java.util.function.Consumer;
@@ -38,7 +37,7 @@ public class ConnectionPoolConfigurationBuilder {
 
     private ConnectionPoolConfiguration.PoolImplementation poolImplementation = ConnectionPoolConfiguration.PoolImplementation.DEFAULT;
     private ConnectionFactoryConfiguration connectionFactoryConfiguration;
-    private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.OFF;
+    private ConnectionPoolConfiguration.PreFillMode preFillMode = ConnectionPoolConfiguration.PreFillMode.NONE;
     private TransactionIntegration transactionIntegration = TransactionIntegration.none();
     private volatile int minSize = 0;
     private volatile int maxSize = 0;

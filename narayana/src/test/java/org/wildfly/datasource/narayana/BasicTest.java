@@ -4,6 +4,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.wildfly.datasource.api.WildFlyDataSource;
 import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
+import org.wildfly.datasource.api.security.NamePrincipal;
+import org.wildfly.datasource.api.security.SimplePassword;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;

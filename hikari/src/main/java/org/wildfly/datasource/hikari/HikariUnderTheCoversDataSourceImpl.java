@@ -137,16 +137,6 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
     }
 
     @Override
-    public XAConnection getXAConnection() throws SQLException {
-        throw new UnsupportedOperationException( "Unsupported" );
-    }
-
-    @Override
-    public XAConnection getXAConnection(String user, String password) throws SQLException {
-        throw new UnsupportedOperationException( "Unsupported" );
-    }
-
-    @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         return hikari.unwrap( iface );
     }

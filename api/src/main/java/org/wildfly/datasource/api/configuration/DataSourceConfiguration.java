@@ -40,7 +40,7 @@ public interface DataSourceConfiguration {
     boolean metricsEnabled();
     void setMetricsEnabled(boolean metricsEnabled);
 
-    // TODO: Allow registration of listeners for changes ?!?!
+    // TODO: Registration a listener for changes ?!?! --- probably needed in the near future
 
     // --- //
 

@@ -27,6 +27,7 @@ import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import javax.sql.DataSource;
 import javax.sql.XADataSource;
+import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
@@ -35,7 +36,7 @@ import java.util.function.Supplier;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSource {
+public interface WildFlyDataSource extends AutoCloseable, DataSource, Serializable {
 
     DataSourceConfiguration getConfiguration();
 
@@ -61,7 +62,7 @@ public interface WildFlyDataSource extends AutoCloseable, DataSource, XADataSour
         switch ( dataSourceConfiguration.dataSourceImplementation() ) {
             default:
             case INTEGRATED:
-                className = "org.wildfly.datasource.integrated.WildFlyDataSourceImpl";
+                className = "org.wildfly.datasource.integrated.WildFlyDataSourceIntegrated";
                 break;
             case WILDFLY:
                 className = "org.wildfly.datasource.impl.WildFlyDataSourceImpl";

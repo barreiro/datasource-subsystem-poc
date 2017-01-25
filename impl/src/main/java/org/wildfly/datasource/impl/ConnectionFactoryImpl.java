@@ -23,6 +23,7 @@
 package org.wildfly.datasource.impl;
 
 import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
+import org.wildfly.datasource.api.configuration.InterruptProtection;
 import org.wildfly.datasource.api.security.NamePrincipal;
 import org.wildfly.datasource.api.security.SimplePassword;
 
@@ -54,7 +55,7 @@ public class ConnectionFactoryImpl {
     public ConnectionFactoryImpl(ConnectionFactoryConfiguration configuration, ConnectionPoolImpl poolImpl) {
         this.configuration = configuration;
         this.poolImpl = poolImpl;
-        this.interruptProtection = InterruptProtection.from( configuration.interruptHandlingMode() );
+        this.interruptProtection = configuration.interruptProtection();
         this.jdbcProperties = configuration.jdbcProperties();
 
         try {

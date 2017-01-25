@@ -44,7 +44,7 @@ public class ConnectionFactoryConfigurationBuilder {
     private String driverClassName = "";
     private ClassLoaderProvider classLoaderProvider;
     private ConnectionFactoryConfiguration.TransactionIsolation transactionIsolation;
-    private ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode;
+    private InterruptProtection interruptProtection;
     private Principal principal;
     private Collection<Object> credentials = new ArrayList<>();
     private Properties jdbcProperties = new Properties();
@@ -89,8 +89,8 @@ public class ConnectionFactoryConfigurationBuilder {
         return applySetting( c -> c.transactionIsolation = transactionIsolation );
     }
 
-    public ConnectionFactoryConfigurationBuilder interruptHandlingMode(ConnectionFactoryConfiguration.InterruptHandlingMode interruptHandlingMode) {
-        return applySetting( c -> c.interruptHandlingMode = interruptHandlingMode );
+    public ConnectionFactoryConfigurationBuilder interruptHandlingMode(InterruptProtection interruptProtection) {
+        return applySetting( c -> c.interruptProtection = interruptProtection );
     }
 
     public ConnectionFactoryConfigurationBuilder principal(Principal principal) {
@@ -115,8 +115,11 @@ public class ConnectionFactoryConfigurationBuilder {
         }
     }
 
+    private void validate() {
+    }
+
     public ConnectionFactoryConfiguration build() {
-        //validate();
+        validate();
         this.lock = true;
 
         return new ConnectionFactoryConfiguration() {
@@ -152,8 +155,8 @@ public class ConnectionFactoryConfigurationBuilder {
             }
 
             @Override
-            public InterruptHandlingMode interruptHandlingMode() {
-                return interruptHandlingMode != null ? interruptHandlingMode : InterruptHandlingMode.OFF;
+            public InterruptProtection interruptProtection() {
+                return interruptProtection != null ? interruptProtection : InterruptProtection.none();
             }
 
             @Override

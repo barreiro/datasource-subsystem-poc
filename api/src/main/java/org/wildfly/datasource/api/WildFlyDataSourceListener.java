@@ -50,66 +50,6 @@ public interface WildFlyDataSourceListener {
 
     default void onConnectionClose(Connection connection) {}
 
-    // --- //
-
-    static void fireBeforeConnectionCreated(List<WildFlyDataSourceListener> listeners) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.beforeConnectionCreated();
-        }
-    }
-
-    static void fireOnConnectionCreated(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionCreated( connection );
-        }
-    }
-
-    static void fireBeforeConnectionAcquire(List<WildFlyDataSourceListener> listeners) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.beforeConnectionAcquire();
-        }
-    }
-
-    static void fireOnConnectionAcquired(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionAcquired( connection );
-        }
-    }
-
-    static void fireBeforeConnectionReturn(List<WildFlyDataSourceListener> listeners) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.beforeConnectionReturn();
-        }
-    }
-
-    static void fireOnConnectionReturn(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionReturn( connection );
-        }
-    }
-
-    static void fireOnConnectionValidation(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionValidation( connection );
-        }
-    }
-
-    static void fireOnConnectionLeak(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionLeak( connection );
-        }
-    }
-
-    static void fireOnConnectionTimeout(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionTimeout( connection );
-        }
-    }
-
-    static void fireOnConnectionClose(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionAcquired( connection );
-        }
-    }
+    default void onWarning(Throwable throwable) {}
 
 }

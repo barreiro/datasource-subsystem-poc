@@ -41,7 +41,7 @@ import java.util.logging.Logger;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class WildFlyDataSourceImpl implements WildFlyDataSource {
+public class WildFlyDataSourceIntegrated implements WildFlyDataSource {
 
     private final DataSourceConfiguration configuration;
     private final List<WildFlyDataSourceListener> listenerList;
@@ -49,7 +49,7 @@ public class WildFlyDataSourceImpl implements WildFlyDataSource {
 
     private final ConnectionPool connectionPool;
 
-    public WildFlyDataSourceImpl(DataSourceConfiguration configuration) {
+    public WildFlyDataSourceIntegrated(DataSourceConfiguration configuration) {
         this.configuration = configuration;
 
         listenerList = new StampedCopyOnWriteArrayList<>( WildFlyDataSourceListener.class );
@@ -98,25 +98,7 @@ public class WildFlyDataSourceImpl implements WildFlyDataSource {
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        throw new SQLException( "username/password invalid on a pooled data souce" );
-    }
-
-    // --- XADataSource methods //
-
-    @Override
-    public XAConnection getXAConnection() throws SQLException {
-        if ( !configuration.isXA() ) {
-            throw new UnsupportedOperationException( "Unsupported" );
-        }
-        return null;
-    }
-
-    @Override
-    public XAConnection getXAConnection(String user, String password) throws SQLException {
-        if ( !configuration.isXA() ) {
-            throw new UnsupportedOperationException( "Unsupported" );
-        }
-        throw new SQLException( "username/password invalid on a pooled data souce" );
+        throw new SQLException( "username/password invalid on a pooled data source" );
     }
 
     // --- Wrapper methods //

@@ -22,6 +22,7 @@
 
 package org.wildfly.datasource.integrated;
 
+import org.wildfly.datasource.api.configuration.InterruptProtection;
 import org.wildfly.datasource.api.tx.TransactionalResource;
 
 import java.lang.reflect.InvocationHandler;

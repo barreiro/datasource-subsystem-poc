@@ -22,7 +22,6 @@
 
 package org.wildfly.datasource.api.configuration;
 
-import org.wildfly.datasource.api.ConnectionValidator;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
 
 /**
@@ -57,12 +56,13 @@ public interface ConnectionPoolConfiguration {
 
     // --- //
 
+    // TODO: Remove. The idea here was to have a configurable object pool, but it's not possible to have it and still met the performance requirements.
     enum PoolImplementation {
         DEFAULT, BLOCKING_QUEUE, LOCK_FREE, SEMAPHORE, FAST_BAG
     }
 
     enum PreFillMode {
-        OFF, MIN, MAX
+        NONE, MIN, MAX
     }
 
 }

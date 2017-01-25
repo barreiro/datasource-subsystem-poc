@@ -22,6 +22,8 @@
 
 package org.wildfly.datasource.impl;
 
+import org.wildfly.datasource.api.configuration.InterruptProtection;
+
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;

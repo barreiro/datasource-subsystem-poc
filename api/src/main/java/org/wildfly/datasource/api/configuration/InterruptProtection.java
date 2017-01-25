@@ -20,23 +20,35 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.impl;
-
-import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
+package org.wildfly.datasource.api.configuration;
 
 import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public abstract class InterruptProtection {
+public interface InterruptProtection {
 
-    @FunctionalInterface
-    interface SQLRunnable {
+    static InterruptProtection none() {
+        return new InterruptProtection() {
 
-        void run() throws SQLException;
+            @Override
+            public <T> T protect(SQLCallable<T> callable) throws SQLException {
+                return callable.call();
+            }
+
+        };
+    }
+
+    default void protect(SQLRunnable runnable) throws SQLException {
+        protect( () -> runnable );
 
     }
+
+    <T> T protect(SQLCallable<T> callable) throws SQLException;
+
+
+    // --- //
 
     @FunctionalInterface
     interface SQLCallable<T> {
@@ -45,37 +57,11 @@ public abstract class InterruptProtection {
 
     }
 
-    // --- //
+    @FunctionalInterface
+    interface SQLRunnable {
 
-    public static InterruptProtection from(ConnectionFactoryConfiguration.InterruptHandlingMode mode) {
-        switch ( mode ) {
-            case AUTO:
-            case OFF:
-                return NONE;
-            case ON:
-                throw new RuntimeException( "Not implemented" );
-        }
-        return null;
-    }
-
-    // --- //
-
-    public void protect(SQLRunnable runnable) throws SQLException {
-        protect( () -> runnable );
+        void run() throws SQLException;
 
     }
-
-    public abstract <T> T protect(SQLCallable<T> callable) throws SQLException;
-
-    // --- //
-
-    private static InterruptProtection NONE = new InterruptProtection() {
-
-        @Override
-        public <T> T protect(SQLCallable<T> callable) throws SQLException {
-            return callable.call();
-        }
-
-    };
 
 }

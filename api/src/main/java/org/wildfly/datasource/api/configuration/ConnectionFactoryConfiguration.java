@@ -43,7 +43,7 @@ public interface ConnectionFactoryConfiguration {
 
     TransactionIsolation transactionIsolation();
 
-    InterruptHandlingMode interruptHandlingMode();
+    InterruptProtection interruptProtection();
 
     Principal principal();
 
@@ -57,8 +57,5 @@ public interface ConnectionFactoryConfiguration {
         NONE, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
     }
 
-    enum InterruptHandlingMode {
-        AUTO, ON, OFF
-    }
 
 }

@@ -20,62 +20,32 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.datasource.integrated;
+package org.wildfly.datasource.api.configuration;
 
-import org.wildfly.datasource.api.configuration.ConnectionFactoryConfiguration;
-
+import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public abstract class InterruptProtection {
+public interface ConnectionValidator {
 
-    @FunctionalInterface
-    interface SQLRunnable {
-
-        void run() throws SQLException;
-
-    }
-
-    @FunctionalInterface
-    interface SQLCallable<T> {
-
-        T call() throws SQLException;
-
-    }
+    boolean isValid(Connection connection);
 
     // --- //
 
-    public static InterruptProtection from(ConnectionFactoryConfiguration.InterruptHandlingMode mode) {
-        switch ( mode ) {
-            case AUTO:
-            case OFF:
-                return NONE;
-            case ON:
-                throw new RuntimeException( "Not implemented" );
-        }
-        return null;
+    static ConnectionValidator defaultValidator() {
+        return connection -> {
+            try {
+                return connection.isValid( 0 );
+            } catch ( SQLException e ) {
+                return false;
+            }
+        };
     }
 
-    // --- //
-
-    public void protect(SQLRunnable runnable) throws SQLException {
-        protect( () -> runnable );
-
+    static ConnectionValidator emptyValidator() {
+        return connection -> true;
     }
-
-    public abstract <T> T protect(SQLCallable<T> callable) throws SQLException;
-
-    // --- //
-
-    private static InterruptProtection NONE = new InterruptProtection() {
-
-        @Override
-        public <T> T protect(SQLCallable<T> callable) throws SQLException {
-            return callable.call();
-        }
-
-    };
 
 }

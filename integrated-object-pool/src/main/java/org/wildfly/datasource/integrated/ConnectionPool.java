@@ -22,8 +22,8 @@
 
 package org.wildfly.datasource.integrated;
 
-import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
+import org.wildfly.datasource.api.configuration.InterruptProtection;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
 import org.wildfly.datasource.integrated.util.PoolSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
@@ -51,7 +51,7 @@ public class ConnectionPool implements AutoCloseable {
 
     private final ConnectionPoolConfiguration configuration;
 
-    private final WildFlyDataSourceImpl dataSource;
+    private final WildFlyDataSourceIntegrated dataSource;
     private final ThreadLocal<UncheckedArrayList<ConnectionHandler>> localCache;
 
 //    private final ExposedCopyOnWriteArrayList<ConnectionHandler> allConnections;
@@ -70,7 +70,7 @@ public class ConnectionPool implements AutoCloseable {
     private final boolean validatingEnable, reapEnable;
     private volatile long maxUsed = 0;
 
-    public ConnectionPool(ConnectionPoolConfiguration configuration, WildFlyDataSourceImpl dataSource) {
+    public ConnectionPool(ConnectionPoolConfiguration configuration, WildFlyDataSourceIntegrated dataSource) {
         this.configuration = configuration;
         this.dataSource = dataSource;
 
@@ -85,7 +85,7 @@ public class ConnectionPool implements AutoCloseable {
         connectionFactory = new ConnectionFactory( configuration.connectionFactoryConfiguration() );
         housekeepingExecutor = Executors.newSingleThreadScheduledExecutor( Executors.defaultThreadFactory() );
 
-        interruptProtection = InterruptProtection.from( configuration.connectionFactoryConfiguration().interruptHandlingMode() );
+        interruptProtection = configuration.connectionFactoryConfiguration().interruptProtection();
         transactionIntegration = configuration.transactionIntegration();
 
         validatingEnable = configuration.connectionValidationTimeout() > 0;
@@ -95,7 +95,7 @@ public class ConnectionPool implements AutoCloseable {
     public void init() {
         switch ( configuration.preFillMode() ) {
             default:
-            case OFF:
+            case NONE:
                 break;
             case MIN:
                 fill( configuration.minSize() );
@@ -134,14 +134,14 @@ public class ConnectionPool implements AutoCloseable {
                 return;
             }
 
-            WildFlyDataSourceListener.fireBeforeConnectionCreated( dataSource.listenerList() );
+            WildFlyDataSourceListenerHelper.fireBeforeConnectionCreated( dataSource.listenerList() );
             long metricsStamp = dataSource.metricsRegistry().beforeConnectionCreated();
 
             try {
                 ConnectionHandler handler = connectionFactory.createHandler();
                 handler.setConnectionPool( this );
 
-                WildFlyDataSourceListener.fireOnConnectionCreated( dataSource.listenerList(), handler.getConnection() );
+                WildFlyDataSourceListenerHelper.fireOnConnectionCreated( dataSource.listenerList(), handler.getConnection() );
 
                 handler.setState( CHECKED_IN );
                 allConnections.add( handler );
@@ -160,7 +160,7 @@ public class ConnectionPool implements AutoCloseable {
     // --- //
 
     public Connection getConnection() throws SQLException {
-        WildFlyDataSourceListener.fireBeforeConnectionAcquire( dataSource.listenerList() );
+        WildFlyDataSourceListenerHelper.fireBeforeConnectionAcquire( dataSource.listenerList() );
         long metricsStamp = dataSource.metricsRegistry().beforeConnectionAcquire();
 
         ConnectionHandler checkedOutHandler = null;
@@ -176,7 +176,7 @@ public class ConnectionPool implements AutoCloseable {
         }
 
         dataSource.metricsRegistry().afterConnectionAcquire( metricsStamp );
-        WildFlyDataSourceListener.fireOnConnectionAcquired( dataSource.listenerList(), checkedOutHandler.getConnection() );
+        WildFlyDataSourceListenerHelper.fireOnConnectionAcquired( dataSource.listenerList(), checkedOutHandler.getConnection() );
 
         if ( validatingEnable ) {
             checkedOutHandler.setLastAccess( System.nanoTime() );
@@ -315,7 +315,7 @@ public class ConnectionPool implements AutoCloseable {
 
         @Override
         public void run() {
-            WildFlyDataSourceListener.fireOnConnectionValidation( dataSource.listenerList(), handler.getConnection() );
+            WildFlyDataSourceListenerHelper.fireOnConnectionValidation( dataSource.listenerList(), handler.getConnection() );
 
             if ( handler.setState( CHECKED_IN, VALIDATION ) ) {
                 if ( configuration.connectionValidator().isValid( handler.getConnection() ) ) {
@@ -330,7 +330,7 @@ public class ConnectionPool implements AutoCloseable {
             } else {
                 if ( System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( LEAK_INTERVAL_S ) ) {
                     // Potential connection leak. Report.
-                    WildFlyDataSourceListener.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
+                    WildFlyDataSourceListenerHelper.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
                 }
             }
         }
@@ -379,7 +379,7 @@ public class ConnectionPool implements AutoCloseable {
             if ( allConnections.size() > configuration.minSize() && handler.setState( CHECKED_IN, FLUSH ) ) {
                 if ( System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( configuration.connectionReapTimeout() ) ) {
 
-                    WildFlyDataSourceListener.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
+                    WildFlyDataSourceListenerHelper.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
 
                     closeIdleConnection( handler );
                     handler.setState( DESTROYED );

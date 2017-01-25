@@ -22,7 +22,6 @@
 
 package org.wildfly.datasource.impl;
 
-import org.wildfly.datasource.api.WildFlyDataSourceListener;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 
 import java.sql.Connection;
@@ -71,7 +70,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
     public void init() {
         switch ( configuration.preFillMode() ) {
             default:
-            case OFF:
+            case NONE:
                 break;
             case MIN:
                 fill( configuration.minSize() );
@@ -113,13 +112,13 @@ public class ConnectionPoolImpl implements AutoCloseable {
                 return;
             }
 
-            WildFlyDataSourceListener.fireBeforeConnectionCreated( dataSource.listenerList() );
+            WildFlyDataSourceListenerHelper.fireBeforeConnectionCreated( dataSource.listenerList() );
             long metricsStamp = dataSource.metricsRegistry().beforeConnectionCreated();
 
             try {
                 ConnectionHandler handler = connectionFactory.createHandler();
 
-                WildFlyDataSourceListener.fireOnConnectionCreated( dataSource.listenerList(), handler.getConnection() );
+                WildFlyDataSourceListenerHelper.fireOnConnectionCreated( dataSource.listenerList(), handler.getConnection() );
 
                 allConnections.add( handler );
                 connectionPool.checkIn( handler );
@@ -140,7 +139,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
         if ( usedCounter.longValue() >= allConnectionsSize && allConnectionsSize < configuration.maxSize() ) {
             newConnectionHandler();
         }
-        WildFlyDataSourceListener.fireBeforeConnectionAcquire( dataSource.listenerList() );
+        WildFlyDataSourceListenerHelper.fireBeforeConnectionAcquire( dataSource.listenerList() );
         long metricsStamp = dataSource.metricsRegistry().beforeConnectionAcquire();
 
         ConnectionHandler handler;
@@ -151,7 +150,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
         prepareHandlerForCheckOut( handler );
 
         dataSource.metricsRegistry().afterConnectionAcquire( metricsStamp );
-        WildFlyDataSourceListener.fireOnConnectionAcquired( dataSource.listenerList(), handler.getConnection() );
+        WildFlyDataSourceListenerHelper.fireOnConnectionAcquired( dataSource.listenerList(), handler.getConnection() );
 
         return handler.getConnection();
     }
@@ -235,7 +234,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
                     if ( handler.getState() == ConnectionHandler.State.CHECKED_OUT ) {
                         if ( System.nanoTime() - handler.getLastAccess() > TimeUnit.SECONDS.toNanos( LEAK_INTERVAL_S ) ) {
                             // Potential connection leak. Report.
-                            WildFlyDataSourceListener.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
+                            WildFlyDataSourceListenerHelper.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
                         }
                     }
                 }
@@ -257,7 +256,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
 
         @Override
         public void run() {
-            WildFlyDataSourceListener.fireOnConnectionValidation( dataSource.listenerList(), handler.getConnection() );
+            WildFlyDataSourceListenerHelper.fireOnConnectionValidation( dataSource.listenerList(), handler.getConnection() );
 
             if ( handler.getState() == ConnectionHandler.State.CHECKED_IN ) {
                 if ( configuration.connectionValidator().isValid( handler.getConnection() ) ) {
@@ -318,7 +317,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
             if ( allConnections.size() > configuration.minSize() && handler.getState() == ConnectionHandler.State.CHECKED_IN ) {
                 if ( System.nanoTime() - handler.getLastAccess() > TimeUnit.SECONDS.toNanos( configuration.connectionReapTimeout() ) ) {
 
-                    WildFlyDataSourceListener.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
+                    WildFlyDataSourceListenerHelper.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
 
                     handler.setState( ConnectionHandler.State.TO_DESTROY );
                     closeIdleConnection( handler );
