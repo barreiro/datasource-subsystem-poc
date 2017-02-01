@@ -61,6 +61,10 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
     }
 
     private HikariConfig getHikariConfig( DataSourceConfiguration configuration ) {
+        if ( configuration.isXA() ) {
+            throw new UnsupportedOperationException( "Unsupported. Hikari does not support XA" );
+        }
+
         HikariConfig hikariConfig = new HikariConfig();
 
         hikariConfig.setDataSourceJNDI( configuration.jndiName() );

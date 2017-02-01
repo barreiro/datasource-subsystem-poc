@@ -23,10 +23,8 @@
 package org.wildfly.datasource.api;
 
 import org.wildfly.datasource.api.configuration.DataSourceConfiguration;
-import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import javax.sql.DataSource;
-import javax.sql.XADataSource;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -53,31 +51,10 @@ public interface WildFlyDataSource extends AutoCloseable, DataSource, Serializab
         return from( dataSourceConfigurationSupplier.get() );
     }
 
-    static WildFlyDataSource from(DataSourceConfigurationBuilder dataSourceConfigurationBuilder) throws SQLException {
-        return from( dataSourceConfigurationBuilder.build() );
-    }
-
     static WildFlyDataSource from(DataSourceConfiguration dataSourceConfiguration) throws SQLException {
-        String className;
-        switch ( dataSourceConfiguration.dataSourceImplementation() ) {
-            default:
-            case INTEGRATED:
-                className = "org.wildfly.datasource.integrated.WildFlyDataSourceIntegrated";
-                break;
-            case WILDFLY:
-                className = "org.wildfly.datasource.impl.WildFlyDataSourceImpl";
-                break;
-            case HIKARI:
-                if ( dataSourceConfiguration.isXA() ) {
-                    throw new UnsupportedOperationException( "Unsupported" );
-                }
-                className = "org.wildfly.datasource.hikari.HikariUnderTheCoversDataSourceImpl";
-                break;
-        }
-
         try {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            Class<?> dataSourceClass = classLoader.loadClass( className );
+            Class<?> dataSourceClass = classLoader.loadClass( dataSourceConfiguration.dataSourceImplementation().className() );
             Constructor<?> dataSourceConstructor = dataSourceClass.getConstructor( DataSourceConfiguration.class );
             return (WildFlyDataSource) dataSourceConstructor.newInstance( dataSourceConfiguration );
         } catch ( ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e ) {

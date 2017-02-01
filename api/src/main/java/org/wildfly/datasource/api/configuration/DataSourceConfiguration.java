@@ -45,7 +45,20 @@ public interface DataSourceConfiguration {
     // --- //
 
     enum DataSourceImplementation {
-        WILDFLY, INTEGRATED, HIKARI
+
+        WILDFLY("org.wildfly.datasource.impl.WildFlyDataSourceImpl"),
+        INTEGRATED("org.wildfly.datasource.integrated.WildFlyDataSourceIntegrated"),
+        HIKARI("org.wildfly.datasource.hikari.HikariUnderTheCoversDataSourceImpl");
+
+        private String className;
+
+        DataSourceImplementation(String className) {
+            this.className = className;
+        }
+
+        public String className() {
+            return className;
+        }
     }
 
 }
