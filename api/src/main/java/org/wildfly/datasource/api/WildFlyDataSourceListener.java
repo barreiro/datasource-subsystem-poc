@@ -44,7 +44,7 @@ public interface WildFlyDataSourceListener {
 
     default void onConnectionValidation(Connection connection) {}
 
-    default void onConnectionLeak(Connection connection) {}
+    default void onConnectionLeak(Connection connection, Thread thread) {}
 
     default void onConnectionTimeout(Connection connection) {}
 

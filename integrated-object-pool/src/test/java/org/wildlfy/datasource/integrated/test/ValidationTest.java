@@ -11,8 +11,8 @@ import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MIN;
 import static org.wildfly.datasource.api.configuration.DataSourceConfiguration.DataSourceImplementation.INTEGRATED;
 
@@ -42,13 +42,13 @@ public class ValidationTest {
 
         int CALLS = 500;
 
-        try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
+        try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             CountDownLatch latch = new CountDownLatch( dataSource.getConfiguration().connectionPoolConfiguration().maxSize() );
 
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
                 public void onConnectionValidation(Connection connection) {
-                    System.out.println("Validating connection = " + connection);
+                    System.out.println( "Validating connection = " + connection );
                     latch.countDown();
                 }
             } );
@@ -62,11 +62,11 @@ public class ValidationTest {
             System.out.println( dataSource.getMetrics() );
 
             try {
-                if (! latch.await( 4, TimeUnit.SECONDS ) ) {
-                    Assert.fail( "Not all connections were validated" );
+                if ( !latch.await( 4, SECONDS ) ) {
+                    Assert.fail( "Some connections were not validated" );
                 }
             } catch ( InterruptedException e ) {
-                Assert.fail( "Not all connections were validated" );
+                Assert.fail( "Some connections were not validated" );
             }
         }
 
@@ -80,7 +80,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( cp -> cp
                         .minSize( 7 )
                         .maxSize( 10 )
-                        .connectionValidationTimeout( 2 )
+                        .connectionLeakTimeout( 2 )
                         .preFillMode( MIN )
                         .connectionFactoryConfiguration( cf -> cf
                                 .driverClassName( H2_DRIVER_CLASS )
@@ -95,8 +95,8 @@ public class ValidationTest {
 
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
-                public void onConnectionLeak(Connection connection) {
-                    System.out.println("Leak connection = " + connection);
+                public void onConnectionLeak(Connection connection, Thread thread) {
+                    System.out.println( "Leak connection = " + connection + " by thread " + thread.getName() );
                     latch.countDown();
                 }
             } );
@@ -110,7 +110,7 @@ public class ValidationTest {
             System.out.println( dataSource.getMetrics() );
 
             try {
-                if (! latch.await( 3, TimeUnit.SECONDS ) ) {
+                if ( !latch.await( 4, SECONDS ) ) {
                     Assert.fail( "Not all connection leaks were identified" );
                 }
             } catch ( InterruptedException e ) {
@@ -148,7 +148,7 @@ public class ValidationTest {
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
                 public void onConnectionTimeout(Connection connection) {
-                    System.out.println("Timeout connection = " + connection);
+                    System.out.println( "Timeout connection = " + connection );
                 }
             } );
 
@@ -170,9 +170,8 @@ public class ValidationTest {
             }
 
             try {
-                Thread.sleep( TimeUnit.SECONDS.toMillis( 5 ) );
-            } catch ( InterruptedException e ) {
-                // Ignore
+                Thread.sleep( SECONDS.toMillis( 5 ) );
+            } catch ( InterruptedException ignore ) {
             }
 
             System.out.println( dataSource.getMetrics() );

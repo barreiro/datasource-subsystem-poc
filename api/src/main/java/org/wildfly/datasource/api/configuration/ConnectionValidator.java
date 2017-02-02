@@ -23,7 +23,6 @@
 package org.wildfly.datasource.api.configuration;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -38,7 +37,7 @@ public interface ConnectionValidator {
         return connection -> {
             try {
                 return connection.isValid( 0 );
-            } catch ( SQLException e ) {
+            } catch ( Throwable t ) {
                 return false;
             }
         };

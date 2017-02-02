@@ -39,6 +39,8 @@ public interface ConnectionPoolConfiguration {
 
     TransactionIntegration transactionIntegration();
 
+    long connectionLeakTimeout();
+
     long connectionValidationTimeout();
 
     long connectionReapTimeout();

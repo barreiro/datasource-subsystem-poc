@@ -25,6 +25,7 @@ package org.wildfly.datasource.integrated;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.InterruptProtection;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
+import org.wildfly.datasource.integrated.util.HighPriorityScheduledExecutor;
 import org.wildfly.datasource.integrated.util.PoolSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
 import org.wildfly.datasource.integrated.util.UncheckedArrayList;
@@ -32,11 +33,8 @@ import org.wildfly.datasource.integrated.util.UncheckedArrayList;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_IN;
 import static org.wildfly.datasource.integrated.ConnectionHandler.State.CHECKED_OUT;
@@ -54,7 +52,7 @@ public class ConnectionPool implements AutoCloseable {
     private final WildFlyDataSourceIntegrated dataSource;
     private final ThreadLocal<UncheckedArrayList<ConnectionHandler>> localCache;
 
-//    private final ExposedCopyOnWriteArrayList<ConnectionHandler> allConnections;
+    //    private final ExposedCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final AtomicCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final AtomicReferenceCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final LockFreeCopyOnWriteArrayList<ConnectionHandler> allConnections;
@@ -63,11 +61,11 @@ public class ConnectionPool implements AutoCloseable {
 
     private final PoolSynchronizer synchronizer = PoolSynchronizer.nonFair();
     private final ConnectionFactory connectionFactory;
-    private final ScheduledExecutorService housekeepingExecutor;
+    private final HighPriorityScheduledExecutor housekeepingExecutor;
     private final InterruptProtection interruptProtection;
     private final TransactionIntegration transactionIntegration;
 
-    private final boolean validatingEnable, reapEnable;
+    private final boolean leakEnabled, validationEnable, reapEnable;
     private volatile long maxUsed = 0;
 
     public ConnectionPool(ConnectionPoolConfiguration configuration, WildFlyDataSourceIntegrated dataSource) {
@@ -83,12 +81,13 @@ public class ConnectionPool implements AutoCloseable {
 
         localCache = ThreadLocal.withInitial( () -> new UncheckedArrayList<ConnectionHandler>( ConnectionHandler.class ) );
         connectionFactory = new ConnectionFactory( configuration.connectionFactoryConfiguration() );
-        housekeepingExecutor = Executors.newSingleThreadScheduledExecutor( Executors.defaultThreadFactory() );
+        housekeepingExecutor = new HighPriorityScheduledExecutor( 1, "Housekeeping of " + this );
 
         interruptProtection = configuration.connectionFactoryConfiguration().interruptProtection();
         transactionIntegration = configuration.transactionIntegration();
 
-        validatingEnable = configuration.connectionValidationTimeout() > 0;
+        leakEnabled = configuration.connectionLeakTimeout() > 0;
+        validationEnable = configuration.connectionValidationTimeout() > 0;
         reapEnable = configuration.connectionReapTimeout() > 0;
     }
 
@@ -105,13 +104,15 @@ public class ConnectionPool implements AutoCloseable {
                 break;
         }
 
-        if ( validatingEnable ) {
-            housekeepingExecutor.schedule( new ValidationMainTask(), configuration.connectionValidationTimeout(), SECONDS );
+        if ( leakEnabled ) {
+            housekeepingExecutor.schedule( new LeakTask(), configuration.connectionLeakTimeout(), SECONDS );
+        }
+        if ( validationEnable ) {
+            housekeepingExecutor.schedule( new ValidationTask(), configuration.connectionValidationTimeout(), SECONDS );
         }
         if ( reapEnable ) {
-            housekeepingExecutor.schedule( new ReapMainTask(), configuration.connectionReapTimeout(), SECONDS );
+            housekeepingExecutor.schedule( new ReapTask(), configuration.connectionReapTimeout(), SECONDS );
         }
-
     }
 
     private void fill(int newSize) {
@@ -129,19 +130,19 @@ public class ConnectionPool implements AutoCloseable {
     // --- //
 
     private Future<?> newConnectionHandler() {
-        return housekeepingExecutor.submit( () -> {
+        return housekeepingExecutor.executeNow( () -> {
             if ( allConnections.size() >= configuration.maxSize() ) {
                 return;
             }
 
-            WildFlyDataSourceListenerHelper.fireBeforeConnectionCreated( dataSource.listenerList() );
+            WildFlyDataSourceListenerHelper.fireBeforeConnectionCreated( dataSource );
             long metricsStamp = dataSource.metricsRegistry().beforeConnectionCreated();
 
             try {
                 ConnectionHandler handler = connectionFactory.createHandler();
                 handler.setConnectionPool( this );
 
-                WildFlyDataSourceListenerHelper.fireOnConnectionCreated( dataSource.listenerList(), handler.getConnection() );
+                WildFlyDataSourceListenerHelper.fireOnConnectionCreated( dataSource, handler );
 
                 handler.setState( CHECKED_IN );
                 allConnections.add( handler );
@@ -160,7 +161,7 @@ public class ConnectionPool implements AutoCloseable {
     // --- //
 
     public Connection getConnection() throws SQLException {
-        WildFlyDataSourceListenerHelper.fireBeforeConnectionAcquire( dataSource.listenerList() );
+        WildFlyDataSourceListenerHelper.fireBeforeConnectionAcquire( dataSource );
         long metricsStamp = dataSource.metricsRegistry().beforeConnectionAcquire();
 
         ConnectionHandler checkedOutHandler = null;
@@ -176,10 +177,12 @@ public class ConnectionPool implements AutoCloseable {
         }
 
         dataSource.metricsRegistry().afterConnectionAcquire( metricsStamp );
-        WildFlyDataSourceListenerHelper.fireOnConnectionAcquired( dataSource.listenerList(), checkedOutHandler.getConnection() );
+        WildFlyDataSourceListenerHelper.fireOnConnectionAcquired( dataSource, checkedOutHandler );
 
-        if ( validatingEnable ) {
+        if ( leakEnabled || validationEnable ) {
             checkedOutHandler.setLastAccess( System.nanoTime() );
+        }
+        if ( leakEnabled ) {
             checkedOutHandler.setHoldingThread( Thread.currentThread() );
         }
 
@@ -210,7 +213,7 @@ public class ConnectionPool implements AutoCloseable {
     }
 
     private ConnectionHandler handlerFromSharedCache() throws SQLException {
-        long remaining = MILLISECONDS.toNanos( configuration.acquisitionTimeout() );
+        long remaining = SECONDS.toNanos( configuration.acquisitionTimeout() );
         remaining = remaining > 0 ? remaining : Long.MAX_VALUE;
         try {
             for ( ; ; ) {
@@ -240,13 +243,27 @@ public class ConnectionPool implements AutoCloseable {
     // --- //
 
     public void returnConnection(ConnectionHandler handler) throws SQLException {
+        if ( leakEnabled ) {
+            handler.setHoldingThread( null );
+        }
         if ( reapEnable ) {
             handler.setLastAccess( System.nanoTime() );
         }
         if ( transactionIntegration.disassociate( handler.getConnection() ) ) {
+
+            WildFlyDataSourceListenerHelper.fireOnConnectionReturn( dataSource, handler );
+
             localCache.get().add( handler );
-            handler.setState( CHECKED_IN );
+            handler.setState( CHECKED_OUT, CHECKED_IN );
             synchronizer.releaseConditional();
+        }
+    }
+
+    private void closeConnectionSafely(ConnectionHandler handler) {
+        try {
+            handler.closeConnection();
+        } catch ( SQLException e ) {
+            WildFlyDataSourceListenerHelper.fireOnWarning( dataSource, e );
         }
     }
 
@@ -283,123 +300,116 @@ public class ConnectionPool implements AutoCloseable {
         return synchronizer.getQueueLength();
     }
 
-    // --- validation + leak detection //
+    // --- leak detection //
 
-    private class ValidationMainTask implements Runnable {
-
-        private static final long VALIDATION_INTERVAL_MS = 20;
+    private class LeakTask implements Runnable {
 
         @Override
         public void run() {
-            int i = 0;
-            try {
-                for ( ConnectionHandler handler : allConnections.getUnderlyingArray() ) {
-                    housekeepingExecutor.schedule( new ValidationTask( handler ), ++i * VALIDATION_INTERVAL_MS, MILLISECONDS );
+            for ( ConnectionHandler handler : allConnections.getUnderlyingArray() ) {
+                housekeepingExecutor.submit( new LeakConnectionTask( handler ) );
+            }
+            housekeepingExecutor.schedule( this, configuration.connectionLeakTimeout(), SECONDS );
+        }
+
+        private class LeakConnectionTask implements Runnable {
+
+            private ConnectionHandler handler;
+
+            public LeakConnectionTask(ConnectionHandler handler) {
+                this.handler = handler;
+            }
+
+            @Override
+            public void run() {
+                Thread thread = handler.getHoldingThread();
+                if ( thread != null && System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( configuration.connectionLeakTimeout() ) ) {
+                    WildFlyDataSourceListenerHelper.fireOnConnectionLeak( dataSource, handler );
                 }
-            } finally {
-                long validationOffset = MILLISECONDS.toSeconds( ++i * VALIDATION_INTERVAL_MS );
-                housekeepingExecutor.schedule( this, validationOffset + configuration.connectionValidationTimeout(), SECONDS );
             }
         }
     }
 
+    // --- validation //
+
     private class ValidationTask implements Runnable {
-
-        private static final long LEAK_INTERVAL_S = 1;
-
-        private ConnectionHandler handler;
-
-        public ValidationTask(ConnectionHandler handler) {
-            this.handler = handler;
-        }
 
         @Override
         public void run() {
-            WildFlyDataSourceListenerHelper.fireOnConnectionValidation( dataSource.listenerList(), handler.getConnection() );
+            for ( ConnectionHandler handler : allConnections.getUnderlyingArray() ) {
+                housekeepingExecutor.submit( new ValidateConnectionTask( handler ) );
+            }
+            housekeepingExecutor.schedule( this, configuration.connectionValidationTimeout(), SECONDS );
+        }
 
-            if ( handler.setState( CHECKED_IN, VALIDATION ) ) {
-                if ( configuration.connectionValidator().isValid( handler.getConnection() ) ) {
-                    handler.setState( CHECKED_IN );
-                    //System.out.println( "Valid connection " + handler.getConnection() );
-                } else {
-                    handler.setState( FLUSH );
-                    closeInvalidConnection( handler );
-                    handler.setState( DESTROYED );
-                    allConnections.remove( handler );
-                }
-            } else {
-                if ( System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( LEAK_INTERVAL_S ) ) {
-                    // Potential connection leak. Report.
-                    WildFlyDataSourceListenerHelper.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
+        private class ValidateConnectionTask implements Runnable {
+
+            private ConnectionHandler handler;
+
+            public ValidateConnectionTask(ConnectionHandler handler) {
+                this.handler = handler;
+            }
+
+            @Override
+            public void run() {
+                WildFlyDataSourceListenerHelper.fireOnConnectionValidation( dataSource, handler );
+
+                if ( handler.setState( CHECKED_IN, VALIDATION ) ) {
+                    if ( configuration.connectionValidator().isValid( handler.getConnection() ) ) {
+                        handler.setState( CHECKED_IN );
+                        //System.out.println( "Valid connection " + handler.getConnection() );
+                    } else {
+                        handler.setState( FLUSH );
+                        closeConnectionSafely( handler );
+                        dataSource.metricsRegistry().afterConnectionClose();
+                        handler.setState( DESTROYED );
+                        allConnections.remove( handler );
+                    }
                 }
             }
         }
-
-        private void closeInvalidConnection(ConnectionHandler connectionWrapper) {
-            try {
-                connectionWrapper.closeConnection();
-            } catch ( SQLException e ) {
-                // Ignore
-            }
-            dataSource.metricsRegistry().afterConnectionClose();
-        }
-
     }
 
     // --- reap //
 
-    private class ReapMainTask implements Runnable {
-
-        private static final long REAP_INTERVAL_MS = 20;
-
-        @Override
-        public void run() {
-            int i = 0;
-            try {
-                for ( ConnectionHandler handler : allConnections ) {
-                    housekeepingExecutor.schedule( new ReapTask( handler ), ++i * REAP_INTERVAL_MS, MILLISECONDS );
-                }
-            } finally {
-                long timeOffset = ( ++i * REAP_INTERVAL_MS ) / 1000;
-                housekeepingExecutor.schedule( this, timeOffset + configuration.connectionReapTimeout(), SECONDS );
-            }
-        }
-    }
-
     private class ReapTask implements Runnable {
 
-        private ConnectionHandler handler;
-
-        public ReapTask(ConnectionHandler handler) {
-            this.handler = handler;
-        }
-
         @Override
         public void run() {
-            if ( allConnections.size() > configuration.minSize() && handler.setState( CHECKED_IN, FLUSH ) ) {
-                if ( System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( configuration.connectionReapTimeout() ) ) {
+            // TODO Clear thread-local connection cache
+            // localCache = ThreadLocal.withInitial( () -> new UncheckedArrayList<ConnectionHandler>( ConnectionHandler.class ) ) );
 
-                    WildFlyDataSourceListenerHelper.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
+            for ( ConnectionHandler handler : allConnections ) {
+                housekeepingExecutor.submit( new ReapConnectionTask( handler ) );
+            }
+            housekeepingExecutor.schedule( this, configuration.connectionReapTimeout(), SECONDS );
+        }
 
-                    closeIdleConnection( handler );
-                    handler.setState( DESTROYED );
-                    allConnections.remove( handler );
-                } else {
-                    handler.setState( CHECKED_IN );
-//                    System.out.println( "Connection " + handler.getConnection() + " used recently. Do not reap!" );
+        private class ReapConnectionTask implements Runnable {
+
+            private ConnectionHandler handler;
+
+            public ReapConnectionTask(ConnectionHandler handler) {
+                this.handler = handler;
+            }
+
+            @Override
+            public void run() {
+                if ( allConnections.size() > configuration.minSize() && handler.setState( CHECKED_IN, FLUSH ) ) {
+                    if ( System.nanoTime() - handler.getLastAccess() > SECONDS.toNanos( configuration.connectionReapTimeout() ) ) {
+
+                        WildFlyDataSourceListenerHelper.fireOnConnectionTimeout( dataSource, handler );
+
+                        closeConnectionSafely( handler );
+                        handler.setState( DESTROYED );
+                        allConnections.remove( handler );
+                        dataSource.metricsRegistry().afterConnectionTimeout();
+                    } else {
+                        handler.setState( CHECKED_IN );
+                        // System.out.println( "Connection " + handler.getConnection() + " used recently. Do not reap!" );
+                    }
                 }
             }
         }
-
-        private void closeIdleConnection(ConnectionHandler handler) {
-            try {
-                handler.closeConnection();
-            } catch ( SQLException e ) {
-                // Ignore
-            }
-            dataSource.metricsRegistry().afterConnectionTimeout();
-        }
-
     }
-
 }

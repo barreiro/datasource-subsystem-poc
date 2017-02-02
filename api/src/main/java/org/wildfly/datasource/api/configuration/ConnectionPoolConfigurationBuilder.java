@@ -42,9 +42,10 @@ public class ConnectionPoolConfigurationBuilder {
     private volatile int minSize = 0;
     private volatile int maxSize = 0;
     private ConnectionValidator connectionValidator = ConnectionValidator.emptyValidator();
-    private long connectionValidationTimeout = 60;
-    private long connectionReapTimeout = 600;
-    private volatile long acquisitionTimeout = 60_000;
+    private long connectionLeakTimeout = 10;
+    private long connectionValidationTimeout = 100;
+    private long connectionReapTimeout = 1000;
+    private volatile long acquisitionTimeout = 10;
 
     public ConnectionPoolConfigurationBuilder() {
         this.lock = false;
@@ -102,6 +103,10 @@ public class ConnectionPoolConfigurationBuilder {
 
     public ConnectionPoolConfigurationBuilder connectionValidator(ConnectionValidator connectionValidator) {
         return applySetting( c -> c.connectionValidator = connectionValidator );
+    }
+
+    public ConnectionPoolConfigurationBuilder connectionLeakTimeout(long connectionLeakTimeout) {
+        return applySetting( c -> c.connectionLeakTimeout = connectionLeakTimeout );
     }
 
     public ConnectionPoolConfigurationBuilder connectionValidationTimeout(long connectionValidationTimeout) {
@@ -183,6 +188,11 @@ public class ConnectionPoolConfigurationBuilder {
             @Override
             public ConnectionValidator connectionValidator() {
                 return connectionValidator;
+            }
+
+            @Override
+            public long connectionLeakTimeout() {
+                return connectionLeakTimeout;
             }
 
             @Override

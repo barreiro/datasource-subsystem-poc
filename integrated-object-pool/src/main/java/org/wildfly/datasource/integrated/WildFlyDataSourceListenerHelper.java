@@ -24,7 +24,6 @@ package org.wildfly.datasource.integrated;
 
 import org.wildfly.datasource.api.WildFlyDataSourceListener;
 
-import java.sql.Connection;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -33,61 +32,59 @@ import java.util.function.Consumer;
  */
 public class WildFlyDataSourceListenerHelper {
 
-    private WildFlyDataSourceListenerHelper() {}
-
-    public static void fireBeforeConnectionCreated(List<WildFlyDataSourceListener> listeners) {
-        fire( listeners, WildFlyDataSourceListener::beforeConnectionCreated );
+    private WildFlyDataSourceListenerHelper() {
     }
 
-    public static void fireOnConnectionCreated(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionCreated( connection ) );
+    public static void fireBeforeConnectionCreated(WildFlyDataSourceIntegrated dataSource) {
+        fire( dataSource.listenerList(), WildFlyDataSourceListener::beforeConnectionCreated );
     }
 
-    public static void fireBeforeConnectionAcquire(List<WildFlyDataSourceListener> listeners) {
-        fire( listeners, WildFlyDataSourceListener::beforeConnectionAcquire );
+    public static void fireOnConnectionCreated(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionCreated( handler.getConnection() ) );
     }
 
-    public static void fireOnConnectionAcquired(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionAcquired( connection ) );
+    public static void fireBeforeConnectionAcquire(WildFlyDataSourceIntegrated dataSource) {
+        fire( dataSource.listenerList(), WildFlyDataSourceListener::beforeConnectionAcquire );
     }
 
-    public static void fireBeforeConnectionReturn(List<WildFlyDataSourceListener> listeners) {
-        fire( listeners, WildFlyDataSourceListener::beforeConnectionReturn );
+    public static void fireOnConnectionAcquired(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionAcquired( handler.getConnection() ) );
     }
 
-    public static void fireOnConnectionReturn(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionReturn( connection ) );
+    public static void fireBeforeConnectionReturn(WildFlyDataSourceIntegrated dataSource) {
+        fire( dataSource.listenerList(), WildFlyDataSourceListener::beforeConnectionReturn );
     }
 
-    public static void fireOnConnectionValidation(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionValidation( connection ) );
+    public static void fireOnConnectionReturn(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionReturn( handler.getConnection() ) );
     }
 
-    public static void fireOnConnectionLeak(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionLeak( connection ) );
+    public static void fireOnConnectionValidation(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionValidation( handler.getConnection() ) );
     }
 
-    public static void fireOnConnectionTimeout(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionTimeout( connection ) );
+    public static void fireOnConnectionLeak(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionLeak( handler.getConnection(), handler.getHoldingThread() ) );
     }
 
-    public static void fireOnConnectionClose(List<WildFlyDataSourceListener> listeners, Connection connection) {
-        fire( listeners, l -> l.onConnectionClose( connection ) );
+    public static void fireOnConnectionTimeout(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionTimeout( handler.getConnection() ) );
     }
 
-    public static void fireOnWarning(List<WildFlyDataSourceListener> listeners, Throwable throwable) {
-        fire( listeners, l -> l.onWarning( throwable ) );
+    public static void fireOnConnectionClose(WildFlyDataSourceIntegrated dataSource, ConnectionHandler handler) {
+        fire( dataSource.listenerList(), l -> l.onConnectionClose( handler.getConnection() ) );
     }
 
-    private static void fire(List<WildFlyDataSourceListener> listeners, Consumer<WildFlyDataSourceListener> consumer ) {
+    public static void fireOnWarning(WildFlyDataSourceIntegrated dataSource, Throwable throwable) {
+        fire( dataSource.listenerList(), l -> l.onWarning( throwable ) );
+    }
+
+    private static void fire(List<WildFlyDataSourceListener> listeners, Consumer<WildFlyDataSourceListener> consumer) {
         try {
             for ( WildFlyDataSourceListener listener : listeners ) {
                 consumer.accept( listener );
             }
-        }
-        catch ( Throwable t ) { // to be safe
+        } catch ( Throwable ignore ) {
         }
     }
-    
-
 }

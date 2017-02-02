@@ -28,7 +28,7 @@ public class AcquisitionTimeoutTest {
                 .connectionPoolConfiguration( cp -> cp
                         .maxSize( 10 )
                         .connectionValidationTimeout( 2 )
-                        .acquisitionTimeout( 1000 )
+                        .acquisitionTimeout( 1 )
                         .preFillMode( MIN )
                         .connectionFactoryConfiguration( cf -> cf
                                 .driverClassName( H2_DRIVER_CLASS )
