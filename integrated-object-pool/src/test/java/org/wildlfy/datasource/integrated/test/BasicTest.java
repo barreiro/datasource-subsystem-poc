@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MAX;
 import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MIN;
@@ -61,14 +62,22 @@ public class BasicTest {
                         )
                 );
 
-        int THREAD_POOL_SIZE = 15;
-        int CALLS = 50;
-        int SLEEP_TIME = 100;
+        int MAX_SIZE = 10;
+        int THREAD_POOL_SIZE = 150;
+        int CALLS = 5000;
+        int SLEEP_TIME = 10;
 
         ExecutorService executor = Executors.newFixedThreadPool( THREAD_POOL_SIZE );
 
         try ( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
             CountDownLatch latch = new CountDownLatch( CALLS );
+
+            try {
+                while ( dataSource.getMetrics().createdCount() < MAX_SIZE ) {
+                    Thread.sleep( 1000 );
+                }
+            } catch ( InterruptedException ignore ) {
+            }
 
             for ( int i = 0; i < CALLS; i++ ) {
                 executor.submit( () -> {
@@ -88,7 +97,9 @@ public class BasicTest {
                 } );
             }
             try {
-                latch.await();
+                if ( !latch.await( (long) (SLEEP_TIME * CALLS * 1.5 / MAX_SIZE), TimeUnit.MILLISECONDS ) ) {
+                    Assert.fail( "Did not execute on the required amount of time " );
+                }
             } catch ( InterruptedException e ) {
                 e.printStackTrace();
             }

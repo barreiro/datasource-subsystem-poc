@@ -234,7 +234,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
                     if ( handler.getState() == ConnectionHandler.State.CHECKED_OUT ) {
                         if ( System.nanoTime() - handler.getLastAccess() > TimeUnit.SECONDS.toNanos( LEAK_INTERVAL_S ) ) {
                             // Potential connection leak. Report.
-                            WildFlyDataSourceListenerHelper.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection() );
+                            WildFlyDataSourceListenerHelper.fireOnConnectionLeak( dataSource.listenerList(), handler.getConnection(), handler.getHoldingThread());
                         }
                     }
                 }

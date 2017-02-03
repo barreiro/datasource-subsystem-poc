@@ -24,32 +24,36 @@ package org.wildfly.datasource.integrated.util;
 
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author <a href="lbarreiro@redhat$.com">Luis Barreiro</a>
  */
-public class HighPriorityScheduledExecutor extends ScheduledThreadPoolExecutor {
+public class PriorityScheduledExecutor extends ScheduledThreadPoolExecutor {
 
-    private Queue<RunnableFuture<?>> highPriorityTasks = new LinkedList<>();
+    private static final AtomicLong THREAD_COUNT = new AtomicLong();
 
-    public HighPriorityScheduledExecutor(int executorSize, String threadName) {
+    private Queue<RunnableFuture<?>> highPriorityTasks = new ConcurrentLinkedQueue<>();
+
+    public PriorityScheduledExecutor(int executorSize, String threadPrefix) {
         super( executorSize, r -> {
-            Thread housekeepingThread = new Thread( r, threadName );
-            housekeepingThread.setDaemon( true );
+            Thread housekeepingThread = new Thread( r, threadPrefix + THREAD_COUNT.incrementAndGet() );
+            housekeepingThread.setDaemon( false );
             return housekeepingThread;
         } );
     }
 
-    public Future<?> executeNow(Runnable highPriority) {
-        RunnableFuture<?> future = new FutureTask<>( highPriority, null );
-        highPriorityTasks.add( future );
+    public Future<?> executeNow(Runnable priorityTask) {
+        RunnableFuture<?> priorityFuture = new FutureTask<>( priorityTask, null );
+        highPriorityTasks.add( priorityFuture );
         submit( () -> {
         } );
-        return future;
+        return priorityFuture;
     }
 
     @Override

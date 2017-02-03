@@ -25,8 +25,8 @@ package org.wildfly.datasource.integrated;
 import org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration;
 import org.wildfly.datasource.api.configuration.InterruptProtection;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
-import org.wildfly.datasource.integrated.util.HighPriorityScheduledExecutor;
-import org.wildfly.datasource.integrated.util.PoolSynchronizer;
+import org.wildfly.datasource.integrated.util.PriorityScheduledExecutor;
+import org.wildfly.datasource.integrated.util.WildFlyDataSourceSynchronizer;
 import org.wildfly.datasource.integrated.util.StampedCopyOnWriteArrayList;
 import org.wildfly.datasource.integrated.util.UncheckedArrayList;
 
@@ -52,16 +52,16 @@ public class ConnectionPool implements AutoCloseable {
     private final WildFlyDataSourceIntegrated dataSource;
     private final ThreadLocal<UncheckedArrayList<ConnectionHandler>> localCache;
 
-    //    private final ExposedCopyOnWriteArrayList<ConnectionHandler> allConnections;
+//    private final ExposedCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final AtomicCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final AtomicReferenceCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final LockFreeCopyOnWriteArrayList<ConnectionHandler> allConnections;
 //    private final SynchronizedCopyOnWriteArrayList<ConnectionHandler> allConnections;
     private final StampedCopyOnWriteArrayList<ConnectionHandler> allConnections;
 
-    private final PoolSynchronizer synchronizer = PoolSynchronizer.nonFair();
+    private final WildFlyDataSourceSynchronizer synchronizer = new WildFlyDataSourceSynchronizer();
     private final ConnectionFactory connectionFactory;
-    private final HighPriorityScheduledExecutor housekeepingExecutor;
+    private final PriorityScheduledExecutor housekeepingExecutor;
     private final InterruptProtection interruptProtection;
     private final TransactionIntegration transactionIntegration;
 
@@ -81,7 +81,7 @@ public class ConnectionPool implements AutoCloseable {
 
         localCache = ThreadLocal.withInitial( () -> new UncheckedArrayList<ConnectionHandler>( ConnectionHandler.class ) );
         connectionFactory = new ConnectionFactory( configuration.connectionFactoryConfiguration() );
-        housekeepingExecutor = new HighPriorityScheduledExecutor( 1, "Housekeeping of " + this );
+        housekeepingExecutor = new PriorityScheduledExecutor( 1, "Housekeeping of " + this );
 
         interruptProtection = configuration.connectionFactoryConfiguration().interruptProtection();
         transactionIntegration = configuration.transactionIntegration();
@@ -217,6 +217,7 @@ public class ConnectionPool implements AutoCloseable {
         remaining = remaining > 0 ? remaining : Long.MAX_VALUE;
         try {
             for ( ; ; ) {
+                long synchronizationStamp = synchronizer.getStamp();
                 for ( ConnectionHandler handler : allConnections.getUnderlyingArray() ) {
                     if ( handler.setState( CHECKED_IN, CHECKED_OUT ) ) {
                         return handler;
@@ -226,9 +227,8 @@ public class ConnectionPool implements AutoCloseable {
                     newConnectionHandler().get();
                     continue;
                 }
-
                 long start = System.nanoTime();
-                if ( remaining < 0 || !synchronizer.tryAcquire( remaining ) ) {
+                if ( remaining < 0 || !synchronizer.tryAcquire( synchronizationStamp, remaining ) ) {
                     throw new SQLException( "Sorry, acquisition timeout!" );
                 }
                 remaining -= System.nanoTime() - start;
@@ -254,7 +254,7 @@ public class ConnectionPool implements AutoCloseable {
             WildFlyDataSourceListenerHelper.fireOnConnectionReturn( dataSource, handler );
 
             localCache.get().add( handler );
-            handler.setState( CHECKED_OUT, CHECKED_IN );
+            handler.setState( CHECKED_IN );
             synchronizer.releaseConditional();
         }
     }

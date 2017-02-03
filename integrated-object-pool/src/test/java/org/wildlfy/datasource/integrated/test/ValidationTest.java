@@ -110,7 +110,7 @@ public class ValidationTest {
             System.out.println( dataSource.getMetrics() );
 
             try {
-                if ( !latch.await( 4, SECONDS ) ) {
+                if ( !latch.await( 5, SECONDS ) ) {
                     Assert.fail( "Not all connection leaks were identified" );
                 }
             } catch ( InterruptedException e ) {

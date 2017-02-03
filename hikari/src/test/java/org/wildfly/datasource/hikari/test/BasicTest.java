@@ -28,7 +28,6 @@ public class BasicTest {
                                 .jdbcUrl( H2_JDBC_URL )
                         )
                         .maxSize( 10 )
-                        .connectionValidationTimeout( 2000 )
                 );
 
         try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {

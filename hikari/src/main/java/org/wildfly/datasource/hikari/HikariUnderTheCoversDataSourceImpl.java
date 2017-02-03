@@ -38,6 +38,7 @@ import java.security.Principal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -69,7 +70,7 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
 
         hikariConfig.setDataSourceJNDI( configuration.jndiName() );
         hikariConfig.setIdleTimeout( poolConfiguration.connectionReapTimeout() );
-        hikariConfig.setValidationTimeout( poolConfiguration.connectionValidationTimeout() );
+        hikariConfig.setValidationTimeout( TimeUnit.SECONDS.toMillis( poolConfiguration.connectionValidationTimeout() ) );
 
         if( factoryConfiguration.transactionIsolation() != null ) {
             hikariConfig.setTransactionIsolation( "TRANSACTION_" + factoryConfiguration.transactionIsolation().name() );
@@ -90,7 +91,7 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
         }
 
         hikariConfig.setMaximumPoolSize( poolConfiguration.maxSize() );
-        hikariConfig.setConnectionTimeout( poolConfiguration.acquisitionTimeout() );
+        hikariConfig.setConnectionTimeout( poolConfiguration.acquisitionTimeout() * 1000 );
         hikariConfig.setDriverClassName( factoryConfiguration.driverClassName() );
 
         if ( configuration.metricsEnabled() ) {

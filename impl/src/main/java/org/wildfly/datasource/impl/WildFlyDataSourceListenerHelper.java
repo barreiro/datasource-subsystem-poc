@@ -76,9 +76,9 @@ public class WildFlyDataSourceListenerHelper {
         }
     }
 
-    static void fireOnConnectionLeak(List<WildFlyDataSourceListener> listeners, Connection connection) {
+    static void fireOnConnectionLeak(List<WildFlyDataSourceListener> listeners, Connection connection, Thread t) {
         for ( WildFlyDataSourceListener listener : listeners ) {
-            listener.onConnectionLeak( connection );
+            listener.onConnectionLeak( connection, t );
         }
     }
 

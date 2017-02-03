@@ -96,8 +96,8 @@ public class ValidationTest {
 
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
-                public void onConnectionLeak(Connection connection) {
-                    System.out.println("Leak connection = " + connection);
+                public void onConnectionLeak(Connection connection, Thread thread) {
+                    System.out.println("Leak connection = " + connection + " by thread:" + thread.getName() );
                     latch.countDown();
                 }
             } );
