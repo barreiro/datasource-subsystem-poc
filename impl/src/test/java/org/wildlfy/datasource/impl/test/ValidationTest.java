@@ -12,6 +12,7 @@ import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,7 +34,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .minSize( 5 )
                         .maxSize( 10 )
-                        .connectionValidationTimeout( 2 )
+                        .validationTimeout( Duration.ofSeconds( 2 ) )
                         .preFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
                         .connectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .driverClassName( H2_DRIVER_CLASS )
@@ -44,7 +45,7 @@ public class ValidationTest {
         int CALLS = 500;
 
         try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {
-            CountDownLatch latch = new CountDownLatch( (int) dataSource.getConfiguration().connectionPoolConfiguration().maxSize() );
+            CountDownLatch latch = new CountDownLatch( dataSource.getConfiguration().connectionPoolConfiguration().maxSize() );
 
             dataSource.addListener( new WildFlyDataSourceListener() {
                 @Override
@@ -81,7 +82,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .minSize( 7 )
                         .maxSize( 10 )
-                        .connectionValidationTimeout( 2 )
+                        .validationTimeout( Duration.ofSeconds( 2 ) )
                         .preFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
                         .connectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .driverClassName( H2_DRIVER_CLASS )
@@ -129,7 +130,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( new ConnectionPoolConfigurationBuilder()
                         .minSize( 10 )
                         .maxSize( 15 )
-                        .connectionReapTimeout( 2 )
+                        .reapTimeout( Duration.ofSeconds( 2 ) )
                         .preFillMode( ConnectionPoolConfiguration.PreFillMode.MIN )
                         .connectionFactoryConfiguration( new ConnectionFactoryConfigurationBuilder()
                                 .driverClassName( H2_DRIVER_CLASS )
@@ -184,5 +185,4 @@ public class ValidationTest {
             Assert.assertTrue( maxSize - minSize <= dataSource.getMetrics().timeoutCount() );
         }
     }
-
 }

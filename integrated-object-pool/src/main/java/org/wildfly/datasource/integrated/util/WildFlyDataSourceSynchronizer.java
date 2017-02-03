@@ -28,58 +28,36 @@ import java.util.concurrent.locks.AbstractQueuedLongSynchronizer;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class WildFlyDataSourceSynchronizer {
+public class WildFlyDataSourceSynchronizer extends AbstractQueuedLongSynchronizer {
 
     private final LongAdder counter = new LongAdder();
 
-    private final AbstractQueuedLongSynchronizer sync = new AbstractQueuedLongSynchronizer() {
+    @Override
+    protected boolean tryAcquire(long value) {
+//        if ( counter.longValue() > value) System.out.printf( "     >>>   %s got UNLOCKED!!  (%d > %d)%n", Thread.currentThread().getName(), counter.longValue(), value );
+//        else System.out.printf( "  ------  %s got LOCKED on __ %d __ (current %d) %n", Thread.currentThread().getName(), value, counter.longValue() );
 
-        @Override
-        protected boolean tryAcquire(long value) {
-//            if ( counter.longValue() > value) System.out.printf( "     >>>   %s got UNLOCKED!!  (%d > %d)%n", Thread.currentThread().getName(), counter.longValue(), value );
-//            else System.out.printf( "  ------  %s got LOCKED on __ %d __ (current %d) %n", Thread.currentThread().getName(), value, counter.longValue() );
+        // Advance when counter is greater than value
+        return counter.longValue() > value;
+    }
 
-            // Advance when counter is greater than value
-            return counter.longValue() > value;
-        }
+    @Override
+    protected boolean tryRelease(long releases) {
+//        System.out.printf( "  >>>     %s releases __ %d __%n", Thread.currentThread().getName(), counter.longValue() );
 
-        @Override
-        protected boolean tryRelease(long releases) {
-            counter.add( releases );
-//            System.out.printf( "  >>>     %s releases __ %d __%n", Thread.currentThread().getName(), counter.longValue() );
-            return true;
-        }
-    };
+        counter.add( releases );
+        return true;
+    }
 
     // --- //
-
-    public int getQueueLength() {
-        return sync.getQueueLength();
-    }
-
-    public boolean hasQueuedThreads() {
-        return sync.hasQueuedThreads();
-    }
 
     public long getStamp() {
         return counter.sum();
     }
 
-    public boolean tryAcquire(long stamp, long nanos) throws InterruptedException {
-        return sync.tryAcquireNanos( stamp, nanos );
-    }
-
-    public boolean tryAcquire(long nanos) throws InterruptedException {
-        return sync.tryAcquireNanos( counter.sum(), nanos );
-    }
-
-    public void release() {
-        sync.release( 1 );
-    }
-
     public void releaseConditional() {
-        if ( sync.hasQueuedThreads() ) {
-            release();
+        if ( hasQueuedThreads() ) {
+            release( 1 );
         }
     }
 }

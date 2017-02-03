@@ -9,6 +9,7 @@ import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
@@ -28,6 +29,7 @@ public class BasicTest {
                                 .jdbcUrl( H2_JDBC_URL )
                         )
                         .maxSize( 10 )
+                        .validationTimeout( Duration.ofMinutes( 1 ) )
                 );
 
         try( WildFlyDataSource dataSource = WildFlyDataSource.from( dataSourceConfigurationBuilder ) ) {

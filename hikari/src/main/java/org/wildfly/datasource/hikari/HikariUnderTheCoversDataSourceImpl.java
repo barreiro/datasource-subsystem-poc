@@ -69,8 +69,8 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
         HikariConfig hikariConfig = new HikariConfig();
 
         hikariConfig.setDataSourceJNDI( configuration.jndiName() );
-        hikariConfig.setIdleTimeout( poolConfiguration.connectionReapTimeout() );
-        hikariConfig.setValidationTimeout( TimeUnit.SECONDS.toMillis( poolConfiguration.connectionValidationTimeout() ) );
+        hikariConfig.setIdleTimeout( poolConfiguration.reapTimeout().toMillis() );
+        hikariConfig.setValidationTimeout( poolConfiguration.validationTimeout().toMillis() );
 
         if( factoryConfiguration.transactionIsolation() != null ) {
             hikariConfig.setTransactionIsolation( "TRANSACTION_" + factoryConfiguration.transactionIsolation().name() );
@@ -91,7 +91,7 @@ public class HikariUnderTheCoversDataSourceImpl implements WildFlyDataSource {
         }
 
         hikariConfig.setMaximumPoolSize( poolConfiguration.maxSize() );
-        hikariConfig.setConnectionTimeout( poolConfiguration.acquisitionTimeout() * 1000 );
+        hikariConfig.setConnectionTimeout( poolConfiguration.acquisitionTimeout().toMillis() );
         hikariConfig.setDriverClassName( factoryConfiguration.driverClassName() );
 
         if ( configuration.metricsEnabled() ) {

@@ -24,6 +24,7 @@ package org.wildfly.datasource.api.configuration;
 
 import org.wildfly.datasource.api.tx.TransactionIntegration;
 
+import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -31,7 +32,7 @@ import java.util.function.Supplier;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class ConnectionPoolConfigurationBuilder {
+public class ConnectionPoolConfigurationBuilder implements Supplier<ConnectionPoolConfiguration> {
 
     private volatile boolean lock;
 
@@ -42,10 +43,10 @@ public class ConnectionPoolConfigurationBuilder {
     private volatile int minSize = 0;
     private volatile int maxSize = 0;
     private ConnectionValidator connectionValidator = ConnectionValidator.emptyValidator();
-    private long connectionLeakTimeout = 10;
-    private long connectionValidationTimeout = 100;
-    private long connectionReapTimeout = 1000;
-    private volatile long acquisitionTimeout = 10;
+    private Duration leakTimeout = Duration.ZERO;
+    private Duration validationTimeout = Duration.ZERO;
+    private Duration reapTimeout = Duration.ZERO;
+    private volatile Duration acquisitionTimeout = Duration.ZERO;
 
     public ConnectionPoolConfigurationBuilder() {
         this.lock = false;
@@ -59,20 +60,17 @@ public class ConnectionPoolConfigurationBuilder {
         return this;
     }
 
-    public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(ConnectionFactoryConfiguration connectionFactoryConfiguration) {
-        return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfiguration );
-    }
-
-    public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(ConnectionFactoryConfigurationBuilder connectionFactoryConfigurationBuilder) {
-        return applySetting( c -> c.connectionFactoryConfiguration = connectionFactoryConfigurationBuilder.build() );
-    }
-
     public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(Supplier<ConnectionFactoryConfiguration> supplier) {
         return applySetting( c -> c.connectionFactoryConfiguration = supplier.get() );
     }
 
     public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(Function<ConnectionFactoryConfigurationBuilder, ConnectionFactoryConfigurationBuilder> function) {
-        return applySetting( c -> c.connectionFactoryConfiguration = function.apply( new ConnectionFactoryConfigurationBuilder() ).build() );
+        return applySetting( c -> c.connectionFactoryConfiguration = function.apply( new ConnectionFactoryConfigurationBuilder() ).get() );
+    }
+
+    @Override
+    public ConnectionPoolConfiguration get() {
+        return build();
     }
 
     // --- //
@@ -97,7 +95,7 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.maxSize = maxSize );
     }
 
-    public ConnectionPoolConfigurationBuilder acquisitionTimeout(int acquisitionTimeout) {
+    public ConnectionPoolConfigurationBuilder acquisitionTimeout(Duration acquisitionTimeout) {
         return applySetting( c -> c.acquisitionTimeout = acquisitionTimeout );
     }
 
@@ -105,16 +103,16 @@ public class ConnectionPoolConfigurationBuilder {
         return applySetting( c -> c.connectionValidator = connectionValidator );
     }
 
-    public ConnectionPoolConfigurationBuilder connectionLeakTimeout(long connectionLeakTimeout) {
-        return applySetting( c -> c.connectionLeakTimeout = connectionLeakTimeout );
+    public ConnectionPoolConfigurationBuilder leakTimeout(Duration leakTimeout) {
+        return applySetting( c -> c.leakTimeout = leakTimeout );
     }
 
-    public ConnectionPoolConfigurationBuilder connectionValidationTimeout(long connectionValidationTimeout) {
-        return applySetting( c -> c.connectionValidationTimeout = connectionValidationTimeout );
+    public ConnectionPoolConfigurationBuilder validationTimeout(Duration validationTimeout) {
+        return applySetting( c -> c.validationTimeout = validationTimeout );
     }
 
-    public ConnectionPoolConfigurationBuilder connectionReapTimeout(long connectionReapTimeout) {
-        return applySetting( c -> c.connectionReapTimeout = connectionReapTimeout );
+    public ConnectionPoolConfigurationBuilder reapTimeout(Duration reapTimeout) {
+        return applySetting( c -> c.reapTimeout = reapTimeout );
     }
 
     private void validate() {
@@ -129,7 +127,7 @@ public class ConnectionPoolConfigurationBuilder {
         }
     }
 
-    public ConnectionPoolConfiguration build() {
+    private ConnectionPoolConfiguration build() {
         validate();
         this.lock = true;
 
@@ -176,12 +174,12 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public long acquisitionTimeout() {
+            public Duration acquisitionTimeout() {
                 return acquisitionTimeout;
             }
 
             @Override
-            public void setAcquisitionTimeout(long timeout) {
+            public void setAcquisitionTimeout(Duration timeout) {
                 acquisitionTimeout = timeout;
             }
 
@@ -191,18 +189,18 @@ public class ConnectionPoolConfigurationBuilder {
             }
 
             @Override
-            public long connectionLeakTimeout() {
-                return connectionLeakTimeout;
+            public Duration leakTimeout() {
+                return leakTimeout;
             }
 
             @Override
-            public long connectionValidationTimeout() {
-                return connectionValidationTimeout;
+            public Duration validationTimeout() {
+                return validationTimeout;
             }
 
             @Override
-            public long connectionReapTimeout() {
-                return connectionReapTimeout;
+            public Duration reapTimeout() {
+                return reapTimeout;
             }
 
         };

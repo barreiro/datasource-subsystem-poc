@@ -45,19 +45,11 @@ public class DataSourceConfigurationBuilder implements Supplier<DataSourceConfig
     }
 
     private DataSourceConfigurationBuilder applySetting(Consumer<DataSourceConfigurationBuilder> consumer) {
-        if (lock) {
-            throw new IllegalStateException("Attempt to modify an immutable configuration");
+        if ( lock ) {
+            throw new IllegalStateException( "Attempt to modify an immutable configuration" );
         }
         consumer.accept( this );
         return this;
-    }
-
-    public DataSourceConfigurationBuilder connectionPoolConfiguration(ConnectionPoolConfiguration connectionPoolConfiguration) {
-        return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfiguration );
-    }
-
-    public DataSourceConfigurationBuilder connectionPoolConfiguration(ConnectionPoolConfigurationBuilder connectionPoolConfigurationBuilder) {
-        return applySetting( c -> c.connectionPoolConfiguration = connectionPoolConfigurationBuilder.build() );
     }
 
     public DataSourceConfigurationBuilder connectionPoolConfiguration(Supplier<ConnectionPoolConfiguration> supplier) {
@@ -65,7 +57,7 @@ public class DataSourceConfigurationBuilder implements Supplier<DataSourceConfig
     }
 
     public DataSourceConfigurationBuilder connectionPoolConfiguration(Function<ConnectionPoolConfigurationBuilder, ConnectionPoolConfigurationBuilder> function) {
-        return applySetting( c -> c.connectionPoolConfiguration = function.apply( new ConnectionPoolConfigurationBuilder() ).build() );
+        return applySetting( c -> c.connectionPoolConfiguration = function.apply( new ConnectionPoolConfigurationBuilder() ).get() );
     }
 
     @Override
@@ -99,7 +91,7 @@ public class DataSourceConfigurationBuilder implements Supplier<DataSourceConfig
         }
     }
 
-    public DataSourceConfiguration build() {
+    private DataSourceConfiguration build() {
         validate();
         this.lock = true;
 
@@ -134,9 +126,6 @@ public class DataSourceConfigurationBuilder implements Supplier<DataSourceConfig
             public void setMetricsEnabled(boolean metrics) {
                 metricsEnabled = metrics;
             }
-
         };
-
     }
-
 }

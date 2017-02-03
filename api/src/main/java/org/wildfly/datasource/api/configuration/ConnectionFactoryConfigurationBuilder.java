@@ -27,11 +27,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class ConnectionFactoryConfigurationBuilder {
+public class ConnectionFactoryConfigurationBuilder implements Supplier<ConnectionFactoryConfiguration> {
 
     private static final String USERNAME_PROPERTY_NAME = "username";
     private static final String PASSWORD_PROPERTY_NAME = "password";
@@ -59,6 +60,11 @@ public class ConnectionFactoryConfigurationBuilder {
         }
         consumer.accept( this );
         return this;
+    }
+
+    @Override
+    public ConnectionFactoryConfiguration get() {
+        return build();
     }
 
     public ConnectionFactoryConfigurationBuilder autoCommit(boolean autoCommit) {
@@ -115,10 +121,12 @@ public class ConnectionFactoryConfigurationBuilder {
         }
     }
 
+    // --- //
+    
     private void validate() {
     }
 
-    public ConnectionFactoryConfiguration build() {
+    private ConnectionFactoryConfiguration build() {
         validate();
         this.lock = true;
 

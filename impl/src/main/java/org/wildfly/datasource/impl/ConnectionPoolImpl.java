@@ -80,11 +80,11 @@ public class ConnectionPoolImpl implements AutoCloseable {
                 break;
         }
 
-        if ( configuration.connectionValidationTimeout() > 0 ) {
-            housekeepingExecutor.schedule( new ValidationMainTask(), configuration.connectionValidationTimeout(), TimeUnit.SECONDS );
+        if ( !configuration.validationTimeout().isZero() ) {
+            housekeepingExecutor.schedule( new ValidationMainTask(), configuration.validationTimeout().toNanos(), TimeUnit.NANOSECONDS );
         }
-        if ( configuration.connectionReapTimeout() > 0 ) {
-            housekeepingExecutor.schedule( new ReapMainTask(), configuration.connectionReapTimeout(), TimeUnit.SECONDS );
+        if ( !configuration.reapTimeout().isZero() ) {
+            housekeepingExecutor.schedule( new ReapMainTask(), configuration.reapTimeout().toNanos(), TimeUnit.NANOSECONDS );
         }
 
     }
@@ -220,7 +220,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
 
     private class ValidationMainTask implements Runnable {
 
-        private static final long VALIDATION_INTERVAL_MS = 20;
+        private static final long VALIDATION_INTERVAL_NS = 20 * 1_000_000;
         private static final long LEAK_INTERVAL_S = 1;
 
         @Override
@@ -229,7 +229,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
             try {
                 for ( ConnectionHandler handler : allConnections ) {
                     if ( handler.getState() == ConnectionHandler.State.CHECKED_IN ) {
-                        housekeepingExecutor.schedule( new ValidationTask( handler ), ++i * VALIDATION_INTERVAL_MS, TimeUnit.MILLISECONDS );
+                        housekeepingExecutor.schedule( new ValidationTask( handler ), ++i * VALIDATION_INTERVAL_NS, TimeUnit.NANOSECONDS );
                     }
                     if ( handler.getState() == ConnectionHandler.State.CHECKED_OUT ) {
                         if ( System.nanoTime() - handler.getLastAccess() > TimeUnit.SECONDS.toNanos( LEAK_INTERVAL_S ) ) {
@@ -240,8 +240,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
                 }
             }
             finally {
-                long validationOffset = TimeUnit.MILLISECONDS.toSeconds( ++i * VALIDATION_INTERVAL_MS );
-                housekeepingExecutor.schedule( this, validationOffset + configuration.connectionValidationTimeout(), TimeUnit.SECONDS );
+                housekeepingExecutor.schedule( this, ++i * VALIDATION_INTERVAL_NS + configuration.validationTimeout().toNanos(), TimeUnit.NANOSECONDS );
             }
         }
     }
@@ -286,7 +285,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
 
     private class ReapMainTask implements Runnable {
 
-        private static final long REAP_INTERVAL_MS = 20;
+        private static final long REAP_INTERVAL_NS = 20 * 1_000_000;
 
         @Override
         public void run() {
@@ -294,12 +293,11 @@ public class ConnectionPoolImpl implements AutoCloseable {
             try {
                 for ( ConnectionHandler handler : allConnections ) {
                     if ( handler.getState() == ConnectionHandler.State.CHECKED_IN ) {
-                        housekeepingExecutor.schedule( new ReapTask( handler ), ++i * REAP_INTERVAL_MS, TimeUnit.MILLISECONDS );
+                        housekeepingExecutor.schedule( new ReapTask( handler ), ++i * REAP_INTERVAL_NS, TimeUnit.NANOSECONDS );
                     }
                 }
             } finally {
-                long timeOffset = ( ++i * REAP_INTERVAL_MS ) / 1000;
-                housekeepingExecutor.schedule( this, timeOffset + configuration.connectionReapTimeout(), TimeUnit.SECONDS );
+                housekeepingExecutor.schedule( this, ++i * REAP_INTERVAL_NS + configuration.reapTimeout().toNanos(), TimeUnit.NANOSECONDS );
             }
         }
     }
@@ -315,7 +313,7 @@ public class ConnectionPoolImpl implements AutoCloseable {
         @Override
         public void run() {
             if ( allConnections.size() > configuration.minSize() && handler.getState() == ConnectionHandler.State.CHECKED_IN ) {
-                if ( System.nanoTime() - handler.getLastAccess() > TimeUnit.SECONDS.toNanos( configuration.connectionReapTimeout() ) ) {
+                if ( System.nanoTime() - handler.getLastAccess() > configuration.reapTimeout().toNanos() ) {
 
                     WildFlyDataSourceListenerHelper.fireOnConnectionTimeout( dataSource.listenerList(), handler.getConnection() );
 

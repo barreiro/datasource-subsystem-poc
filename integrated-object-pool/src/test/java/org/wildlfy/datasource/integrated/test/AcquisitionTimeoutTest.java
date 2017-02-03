@@ -7,6 +7,7 @@ import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static org.wildfly.datasource.api.configuration.ConnectionPoolConfiguration.PreFillMode.MIN;
@@ -27,8 +28,8 @@ public class AcquisitionTimeoutTest {
                 .metricsEnabled( true )
                 .connectionPoolConfiguration( cp -> cp
                         .maxSize( 10 )
-                        .connectionValidationTimeout( 2 )
-                        .acquisitionTimeout( 1 )
+                        .validationTimeout( Duration.ofSeconds( 2 ) )
+                        .acquisitionTimeout( Duration.ofSeconds( 1 ) )
                         .preFillMode( MIN )
                         .connectionFactoryConfiguration( cf -> cf
                                 .driverClassName( H2_DRIVER_CLASS )

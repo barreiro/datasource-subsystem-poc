@@ -38,6 +38,7 @@ public interface DataSourceConfiguration {
     // --- //
 
     boolean metricsEnabled();
+
     void setMetricsEnabled(boolean metricsEnabled);
 
     // TODO: Registration a listener for changes ?!?! --- probably needed in the near future
@@ -46,9 +47,9 @@ public interface DataSourceConfiguration {
 
     enum DataSourceImplementation {
 
-        WILDFLY("org.wildfly.datasource.impl.WildFlyDataSourceImpl"),
-        INTEGRATED("org.wildfly.datasource.integrated.WildFlyDataSourceIntegrated"),
-        HIKARI("org.wildfly.datasource.hikari.HikariUnderTheCoversDataSourceImpl");
+        WILDFLY( "org.wildfly.datasource.impl.WildFlyDataSourceImpl" ),
+        INTEGRATED( "org.wildfly.datasource.integrated.WildFlyDataSourceIntegrated" ),
+        HIKARI( "org.wildfly.datasource.hikari.HikariUnderTheCoversDataSourceImpl" );
 
         private String className;
 
@@ -60,5 +61,4 @@ public interface DataSourceConfiguration {
             return className;
         }
     }
-
 }

@@ -24,6 +24,8 @@ package org.wildfly.datasource.api.configuration;
 
 import org.wildfly.datasource.api.tx.TransactionIntegration;
 
+import java.time.Duration;
+
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
@@ -39,11 +41,11 @@ public interface ConnectionPoolConfiguration {
 
     TransactionIntegration transactionIntegration();
 
-    long connectionLeakTimeout();
+    Duration leakTimeout();
 
-    long connectionValidationTimeout();
+    Duration validationTimeout();
 
-    long connectionReapTimeout();
+    Duration reapTimeout();
 
     // --- Mutable attributes
 
@@ -53,8 +55,8 @@ public interface ConnectionPoolConfiguration {
     int maxSize();
     void setMaxSize(int size);
 
-    long acquisitionTimeout();
-    void setAcquisitionTimeout(long timeout);
+    Duration acquisitionTimeout();
+    void setAcquisitionTimeout(Duration timeout);
 
     // --- //
 

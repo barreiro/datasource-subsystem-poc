@@ -8,6 +8,7 @@ import org.wildfly.datasource.api.configuration.DataSourceConfigurationBuilder;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +33,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( cp -> cp
                         .minSize( 10 )
                         .maxSize( 10 )
-                        .connectionValidationTimeout( 2 )
+                        .validationTimeout( Duration.ofSeconds( 2 ) )
                         .preFillMode( MIN )
                         .connectionFactoryConfiguration( cf -> cf
                                 .driverClassName( H2_DRIVER_CLASS )
@@ -80,7 +81,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( cp -> cp
                         .minSize( 7 )
                         .maxSize( 10 )
-                        .connectionLeakTimeout( 2 )
+                        .leakTimeout( Duration.ofSeconds( 2 ) )
                         .preFillMode( MIN )
                         .connectionFactoryConfiguration( cf -> cf
                                 .driverClassName( H2_DRIVER_CLASS )
@@ -128,7 +129,7 @@ public class ValidationTest {
                 .connectionPoolConfiguration( cp -> cp
                         .minSize( 10 )
                         .maxSize( 15 )
-                        .connectionReapTimeout( 2 )
+                        .reapTimeout( Duration.ofSeconds( 2 ) )
                         .preFillMode( MIN )
                         .connectionFactoryConfiguration( cf -> cf
                                 .driverClassName( H2_DRIVER_CLASS )
