@@ -182,7 +182,7 @@ public class ConnectionPool implements AutoCloseable {
         dataSource.metricsRegistry().afterConnectionAcquire( metricsStamp );
         fireOnConnectionAcquired( dataSource, checkedOutHandler );
 
-        if ( leakEnabled || validationEnable ) {
+        if ( leakEnabled || reapEnable ) {
             checkedOutHandler.setLastAccess( nanoTime() );
         }
         if ( leakEnabled ) {
@@ -258,7 +258,7 @@ public class ConnectionPool implements AutoCloseable {
 
             localCache.get().add( handler );
             handler.setState( CHECKED_IN );
-            synchronizer.releaseConditional();
+            synchronizer.release( 1 );
         }
     }
 

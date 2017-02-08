@@ -54,6 +54,23 @@ public class ConnectionFactoryConfigurationBuilder implements Supplier<Connectio
         this.lock = false;
     }
 
+    public ConnectionFactoryConfigurationBuilder(ConnectionFactoryConfiguration existingConfiguration) {
+        this.lock = false;
+        if ( existingConfiguration == null ) {
+            return;
+        }
+        this.autoCommit = existingConfiguration.autoCommit();
+        this.jdbcUrl = existingConfiguration.jdbcUrl();
+        this.initialSql = existingConfiguration.initialSql();
+        this.driverClassName = existingConfiguration.driverClassName();
+        this.classLoaderProvider = existingConfiguration.classLoaderProvider();
+        this.transactionIsolation = existingConfiguration.transactionIsolation();
+        this.interruptProtection = existingConfiguration.interruptProtection();
+        this.principal = existingConfiguration.principal();
+        this.credentials = existingConfiguration.credentials();
+        this.jdbcProperties = existingConfiguration.jdbcProperties();
+    }
+
     private ConnectionFactoryConfigurationBuilder applySetting(Consumer<ConnectionFactoryConfigurationBuilder> consumer) {
         if (lock) {
             throw new IllegalStateException("Attempt to modify an immutable configuration");

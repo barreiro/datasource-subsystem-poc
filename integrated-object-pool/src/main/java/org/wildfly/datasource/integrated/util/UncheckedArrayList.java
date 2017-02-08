@@ -30,8 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -43,7 +41,6 @@ import java.util.stream.Stream;
  */
 public class UncheckedArrayList<T> implements List<T> {
 
-    private final Class<?> clazz;
     private T[] data;
     private int size;
 
@@ -55,7 +52,6 @@ public class UncheckedArrayList<T> implements List<T> {
     @SuppressWarnings( "unchecked" )
     public UncheckedArrayList(Class<?> clazz, int capacity) {
         this.data = (T[]) Array.newInstance( clazz, capacity );
-        this.clazz = clazz;
         this.size = 0;
     }
 

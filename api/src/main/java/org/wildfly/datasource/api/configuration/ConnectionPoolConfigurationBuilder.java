@@ -52,9 +52,27 @@ public class ConnectionPoolConfigurationBuilder implements Supplier<ConnectionPo
         this.lock = false;
     }
 
+    public ConnectionPoolConfigurationBuilder(ConnectionPoolConfiguration existingConfiguration) {
+        this.lock = false;
+        if ( existingConfiguration == null ) {
+            return;
+        }
+        this.poolImplementation = existingConfiguration.poolImplementation();
+        this.connectionFactoryConfiguration = existingConfiguration.connectionFactoryConfiguration();
+        this.preFillMode = existingConfiguration.preFillMode();
+        this.transactionIntegration = existingConfiguration.transactionIntegration();
+        this.minSize = existingConfiguration.minSize();
+        this.maxSize = existingConfiguration.maxSize();
+        this.connectionValidator = existingConfiguration.connectionValidator();
+        this.leakTimeout = existingConfiguration.leakTimeout();
+        this.validationTimeout = existingConfiguration.validationTimeout();
+        this.reapTimeout = existingConfiguration.reapTimeout();
+        this.acquisitionTimeout = existingConfiguration.acquisitionTimeout();
+    }
+
     private ConnectionPoolConfigurationBuilder applySetting(Consumer<ConnectionPoolConfigurationBuilder> consumer) {
-        if (lock) {
-            throw new IllegalStateException("Attempt to modify an immutable configuration");
+        if ( lock ) {
+            throw new IllegalStateException( "Attempt to modify an immutable configuration" );
         }
         consumer.accept( this );
         return this;
@@ -65,7 +83,7 @@ public class ConnectionPoolConfigurationBuilder implements Supplier<ConnectionPo
     }
 
     public ConnectionPoolConfigurationBuilder connectionFactoryConfiguration(Function<ConnectionFactoryConfigurationBuilder, ConnectionFactoryConfigurationBuilder> function) {
-        return applySetting( c -> c.connectionFactoryConfiguration = function.apply( new ConnectionFactoryConfigurationBuilder() ).get() );
+        return applySetting( c -> c.connectionFactoryConfiguration = function.apply( new ConnectionFactoryConfigurationBuilder( connectionFactoryConfiguration ) ).get() );
     }
 
     @Override
@@ -131,7 +149,7 @@ public class ConnectionPoolConfigurationBuilder implements Supplier<ConnectionPo
         validate();
         this.lock = true;
 
-        return new ConnectionPoolConfiguration(){
+        return new ConnectionPoolConfiguration() {
 
             @Override
             public PoolImplementation poolImplementation() {
@@ -160,7 +178,7 @@ public class ConnectionPoolConfigurationBuilder implements Supplier<ConnectionPo
 
             @Override
             public void setMinSize(int size) {
-                 minSize = size;
+                minSize = size;
             }
 
             @Override
@@ -202,9 +220,6 @@ public class ConnectionPoolConfigurationBuilder implements Supplier<ConnectionPo
             public Duration reapTimeout() {
                 return reapTimeout;
             }
-
         };
-
     }
-
 }
