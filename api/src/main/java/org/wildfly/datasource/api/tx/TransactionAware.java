@@ -27,14 +27,14 @@ import java.sql.SQLException;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public interface TransactionalResource {
+public interface TransactionAware {
 
-    void transactionLock() throws SQLException;
+    void transactionBegin() throws SQLException;
 
-    void commit() throws SQLException;
+    void transactionCommit() throws SQLException;
 
-    void rollback() throws SQLException;
+    void transactionRollback() throws SQLException;
 
-    void transactionUnlock() throws SQLException;
+    void transactionEnd() throws SQLException;
 
 }

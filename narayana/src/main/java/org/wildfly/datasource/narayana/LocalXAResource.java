@@ -25,7 +25,7 @@ package org.wildfly.datasource.narayana;
 import org.jboss.tm.ConnectableResource;
 import org.jboss.tm.LastResource;
 import org.jboss.tm.XAResourceWrapper;
-import org.wildfly.datasource.api.tx.TransactionalResource;
+import org.wildfly.datasource.api.tx.TransactionAware;
 
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -36,7 +36,7 @@ import javax.transaction.xa.Xid;
  */
 public class LocalXAResource implements XAResource, ConnectableResource, LastResource, XAResourceWrapper {
 
-    private final TransactionalResource connection;
+    private final TransactionAware connection;
 
     private Xid currentXid;
 
@@ -46,7 +46,7 @@ public class LocalXAResource implements XAResource, ConnectableResource, LastRes
 
     private String jndiName;
 
-    public LocalXAResource(TransactionalResource connection) {
+    public LocalXAResource(TransactionAware connection) {
         this.connection = connection;
     }
 
@@ -61,7 +61,7 @@ public class LocalXAResource implements XAResource, ConnectableResource, LastRes
                 throw new XAException( "Starting resource with wrong flags" );
             }
             try {
-                connection.transactionLock();
+                connection.transactionBegin();
             } catch ( Throwable t ) {
                 throw new XAException( "Error trying to start local transaction: " + t.getMessage() );
             }
@@ -72,30 +72,30 @@ public class LocalXAResource implements XAResource, ConnectableResource, LastRes
     @Override
     public void commit(Xid xid, boolean onePhase) throws XAException {
         if ( xid == null || !xid.equals( currentXid ) ) {
-            throw new XAException( "Invalid xid to commit" );
+            throw new XAException( "Invalid xid to transactionCommit" );
         }
         currentXid = null;
 
         try {
-            connection.commit();
-            connection.transactionUnlock();
+            connection.transactionCommit();
+            connection.transactionEnd();
         } catch ( Throwable t ) {
-            throw new XAException( "Error trying to commit local transaction: " + t.getMessage() );
+            throw new XAException( "Error trying to transactionCommit local transaction: " + t.getMessage() );
         }
     }
 
     @Override
     public void rollback(Xid xid) throws XAException {
         if ( xid == null || !xid.equals( currentXid ) ) {
-            throw new XAException( "Invalid xid to commit" );
+            throw new XAException( "Invalid xid to transactionCommit" );
         }
         currentXid = null;
 
         try {
-            connection.rollback();
-            connection.transactionUnlock();
+            connection.transactionRollback();
+            connection.transactionEnd();
         } catch ( Throwable t ) {
-            throw new XAException( "Error trying to rollback local transaction: " + t.getMessage() );
+            throw new XAException( "Error trying to transactionRollback local transaction: " + t.getMessage() );
         }
     }
 

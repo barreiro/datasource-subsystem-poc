@@ -23,7 +23,7 @@
 package org.wildfly.datasource.integrated;
 
 import org.wildfly.datasource.api.configuration.InterruptProtection;
-import org.wildfly.datasource.api.tx.TransactionalResource;
+import org.wildfly.datasource.api.tx.TransactionAware;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -49,7 +49,7 @@ import java.util.concurrent.Executor;
 /**
  * @author <a href="lbarreiro@redhat.com">Luis Barreiro</a>
  */
-public class ConnectionWrapper implements Connection, TransactionalResource {
+public class ConnectionWrapper implements Connection, TransactionAware {
 
     private final ConnectionHandler handler;
     private final InterruptProtection interruptProtection;
@@ -67,13 +67,23 @@ public class ConnectionWrapper implements Connection, TransactionalResource {
 
     // --- //
 
-    public void transactionLock() throws SQLException {
+    public void transactionBegin() throws SQLException {
         autocommitCache = wrappedConnection.getAutoCommit();
         wrappedConnection.setAutoCommit( false );
         inTransaction = true;
     }
 
-    public void transactionUnlock() throws SQLException {
+    @Override
+    public void transactionCommit() throws SQLException {
+        protect( () -> wrappedConnection.commit() );
+    }
+
+    @Override
+    public void transactionRollback() throws SQLException {
+        protect( () -> wrappedConnection.rollback() );
+    }
+
+    public void transactionEnd() throws SQLException {
         inTransaction = false;
         wrappedConnection.setAutoCommit( autocommitCache );
     }
@@ -107,6 +117,9 @@ public class ConnectionWrapper implements Connection, TransactionalResource {
 
     @Override
     public void commit() throws SQLException {
+        if ( inTransaction ) {
+            throw new SQLException( "Attempting to commit while enlisted in a transaction" );
+        }
         protect( () -> wrappedConnection.commit() );
     }
 
@@ -330,12 +343,18 @@ public class ConnectionWrapper implements Connection, TransactionalResource {
 
     @Override
     public void rollback() throws SQLException {
-        wrappedConnection.rollback();
+        if ( inTransaction ) {
+            throw new SQLException( "Attempting to rollback while enlisted in a transaction" );
+        }
+        protect( () -> wrappedConnection.rollback() );
     }
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
-        wrappedConnection.rollback( savepoint );
+        if ( inTransaction ) {
+            throw new SQLException( "Attempting to commit while enlisted in a transaction" );
+        }
+        protect( () -> wrappedConnection.rollback( savepoint ) );
     }
 
     @Override

@@ -22,8 +22,8 @@
 
 package org.wildfly.datasource.narayana;
 
+import org.wildfly.datasource.api.tx.TransactionAware;
 import org.wildfly.datasource.api.tx.TransactionIntegration;
-import org.wildfly.datasource.api.tx.TransactionalResource;
 
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
@@ -51,6 +51,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
         this.transactionSynchronizationRegistry = transactionSynchronizationRegistry;
     }
 
+    @Override
     public Connection getConnection() throws SQLException {
         if ( transactionRunning() ) {
             return (Connection) transactionSynchronizationRegistry.getResource( key );
@@ -58,6 +59,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
         return null;
     }
 
+    @Override
     public void associate(Connection connection) throws SQLException {
         try {
             if ( transactionRunning() ) {
@@ -75,7 +77,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
                         }
                     }
                 } );
-                transactionManager.getTransaction().enlistResource( new LocalXAResource( (TransactionalResource) connection ) );
+                transactionManager.getTransaction().enlistResource( new LocalXAResource( (TransactionAware) connection ) );
             } else {
                 throw new SQLException( "Obtaining a connection outside the scope of an active transaction is not supported" );
             }
@@ -84,6 +86,7 @@ public class NarayanaTransactionIntegration implements TransactionIntegration {
         }
     }
 
+    @Override
     public boolean disassociate(Connection connection) throws SQLException {
         if ( transactionRunning() ) {
             transactionSynchronizationRegistry.putResource( key, null );
